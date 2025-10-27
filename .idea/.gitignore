@@ -1,0 +1,11 @@
+*
+.*
+!.gitignore
+!dictionaries
+!dictionaries/*
+!codeStyles
+!codeStyles/*
+!runConfigurations
+!runConfigurations/*
+!inspectionProfiles
+!inspectionProfiles/*

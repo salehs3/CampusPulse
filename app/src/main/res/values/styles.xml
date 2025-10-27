@@ -1,0 +1,12 @@
+<!--
+    Style and theme definitions for the application.
+    Uses a light AppCompat theme with Illinois colors and no action bar.
+-->
+<resources>
+    <!-- Main application theme -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>       <!-- Primary color (Illinois Blue) -->
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item> <!-- Status bar color -->
+        <item name="colorAccent">@color/colorAccent</item>         <!-- Accent color (Illinois Orange) -->
+    </style>
+</resources>

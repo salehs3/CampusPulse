@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Network security configuration for the application.
+    Allows cleartext (non-HTTPS) traffic to localhost for local development and testing.
+    The mock server runs on localhost, so this configuration is required.
+-->
+<network-security-config>
+    <!-- Allow HTTP connections to localhost (required for local mock server) -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>

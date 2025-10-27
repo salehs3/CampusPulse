@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher icon background - Calendar shape with Illinois orange top bar.
+    Designed to work with the Illinois "I" foreground to create the app icon.
+    Uses a 108dp viewport to match Android adaptive icon standards.
+    Calendar is sized to fit within the circular safe zone (66dp diameter).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- White background fill -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M0,0h108v108h-108z" />
+
+    <!-- Calendar page with border (smaller to fit circular safe zone) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeWidth="3"
+        android:strokeColor="#333333"
+        android:pathData="M32,36 h44 v44 h-44 z" />
+
+    <!-- Calendar top bar (Illinois orange) -->
+    <path
+        android:fillColor="#FF5F05"
+        android:pathData="M32,36 h44 v8 h-44 z" />
+</vector>

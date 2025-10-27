@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Color resource definitions for the application.
+    Uses University of Illinois brand colors as the primary theme.
+-->
+<resources>
+    <!-- Primary theme colors -->
+    <color name="colorPrimary">#13294b</color>      <!-- Illinois Blue -->
+    <color name="colorPrimaryDark">#13294b</color>  <!-- Illinois Blue (dark variant) -->
+    <color name="colorAccent">#E84A27</color>       <!-- Illinois Orange -->
+
+    <!-- Text colors -->
+    <color name="darkTextColor">#444444</color>     <!-- Dark gray for readable text -->
+
+    <!-- Tinted variations of Illinois colors for backgrounds -->
+    <color name="lighterIllinoisBlue">#bdd0ee</color>   <!-- Lighter tint of Illinois Blue -->
+</resources>

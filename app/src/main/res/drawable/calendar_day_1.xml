@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Calendar icon background for the today filter button.
+    Used in MainActivity toolbar to filter events by date (today only).
+    Displays the number "1" overlay in the button to represent a single day.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetTop="3dp"
+    android:insetBottom="3dp">
+    <layer-list>
+        <!-- Calendar shape (white background with dark border) -->
+        <item>
+            <shape android:shape="rectangle">
+                <solid android:color="#FFFFFF" />
+                <corners android:radius="3dp" />
+                <stroke android:width="2dp" android:color="#333333" />
+            </shape>
+        </item>
+        <!-- Calendar top bar (Illinois orange) -->
+        <item android:top="0dp" android:height="6dp" android:left="2dp" android:right="2dp">
+            <shape android:shape="rectangle">
+                <solid android:color="#FF5F05" />
+                <corners android:topLeftRadius="2dp" android:topRightRadius="2dp" />
+            </shape>
+        </item>
+    </layer-list>
+</inset>

@@ -1,0 +1,7 @@
+<!--
+    String resources for the application.
+    Currently empty - string values are defined directly in code and layouts.
+-->
+<resources>
+    <string name="favorite_indicator">Favorite event indicator</string>
+</resources>

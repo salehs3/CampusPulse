@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Computer monitor icon for the virtual/online events filter button.
+    Used in MainActivity toolbar to filter events by virtual status.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Monitor screen (outer frame) -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M21,2 L3,2 C1.9,2 1,2.9 1,4 L1,16 C1,17.1 1.9,18 3,18 L21,18 C22.1,18 23,17.1 23,16 L23,4 C23,2.9 22.1,2 21,2 Z" />
+    <!-- Monitor screen (inner display - blue) -->
+    <path
+        android:fillColor="#4285F4"
+        android:pathData="M21,4 L3,4 L3,16 L21,16 L21,4 Z" />
+    <!-- Stand base -->
+    <path
+        android:fillColor="#333333"
+        android:pathData="M6,19 L18,19 L18,20 L17,20 L17,22 L7,22 L7,20 L6,20 Z" />
+</vector>

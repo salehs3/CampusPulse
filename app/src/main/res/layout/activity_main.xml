@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Layout for MainActivity - the main event discovery screen.
+    Features a search bar with filter buttons at the top and a scrollable list of events below.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/container"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:ignore="HardcodedText,VisualLintTextFieldSize">
+
+    <!-- Toolbar containing search bar and filter buttons -->
+    <Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:background="@android:color/white">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@android:color/white"
+            android:baselineAligned="false"
+            android:orientation="horizontal">
+
+            <!-- Search input field -->
+            <SearchView
+                android:id="@+id/search"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginStart="-16dp"
+                android:iconifiedByDefault="false"
+                android:queryHint="Search..."
+                android:searchIcon="@null"
+                tools:ignore="VisualLintBounds" />
+
+            <!-- Filter button for today's events (calendar icon) -->
+            <FrameLayout
+                android:id="@+id/todayButtonFrame"
+                android:layout_width="44dp"
+                android:layout_height="match_parent"
+                android:paddingStart="6dp"
+                android:paddingEnd="2dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp">
+                <ToggleButton
+                    android:id="@+id/todayButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/calendar_day_1"
+                    android:checked="false"
+                    android:contentDescription="Show only today's events"
+                    android:textOff="1"
+                    android:textOn="1"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="#333333"
+                    android:gravity="center"
+                    android:paddingTop="8dp"
+                    android:alpha="0.3" />
+            </FrameLayout>
+
+            <!-- Filter button for virtual/online events (monitor icon) -->
+            <FrameLayout
+                android:id="@+id/virtualButtonFrame"
+                android:layout_width="44dp"
+                android:layout_height="match_parent"
+                android:paddingStart="2dp"
+                android:paddingEnd="2dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp">
+                <ToggleButton
+                    android:id="@+id/virtualButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/virtual_icon"
+                    android:checked="false"
+                    android:contentDescription="Show only virtual/online events"
+                    android:textOff=""
+                    android:textOn=""
+                    android:alpha="0.3" />
+            </FrameLayout>
+        </LinearLayout>
+
+    </Toolbar>
+
+    <!-- Scrollable list of event summaries -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/recycler_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="List of events." />
+
+    </FrameLayout>
+
+</LinearLayout>

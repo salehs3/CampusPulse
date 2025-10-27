@@ -1,0 +1,8 @@
+<!--
+    State selector for favorite toggle button in EventActivity.
+    Shows filled star when checked, outline star when unchecked.
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true" android:drawable="@drawable/star_filled" />
+    <item android:drawable="@drawable/star_outline" />
+</selector>
