@@ -16,7 +16,7 @@ import java.util.Collections;
 import java.util.List;
 
 public final class MainActivity extends Activity {
-  private static final String tag = MainActivity.class.getSimpleName();
+  private static final String TAG = MainActivity.class.getSimpleName();
   private List<Summary> summaries = Collections.emptyList();
   private SummaryListAdapter listAdapter;
 
@@ -60,7 +60,7 @@ public final class MainActivity extends Activity {
                 summaries = result.getValue();
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
-                Log.e(tag, "Error updating summary list", e);
+                Log.e(TAG, "Error updating summary list", e);
               }
             });
   }
