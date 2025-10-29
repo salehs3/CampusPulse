@@ -1,10 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    AndroidManifest.xml - Tells Android how to launch and configure the app.
+
+    This is the first file Android reads when the app starts. It defines:
+    - What permissions the app needs
+    - Which Application class to create first
+    - Which Activity to show as the main screen
+-->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permissions: Tell Android that this app needs network access -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- STARTUP STEP 1: Android creates EventableApplication first (before any Activity) -->
     <application
         android:name="edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication"
         android:allowBackup="false"
@@ -16,9 +26,12 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="DataExtractionRules">
+
+        <!-- STARTUP STEP 2: After EventableApplication is ready, Android creates MainActivity -->
         <activity
             android:name=".activities.MainActivity"
             android:exported="true">
+            <!-- This intent-filter marks MainActivity as the app's entry point (first screen) -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
