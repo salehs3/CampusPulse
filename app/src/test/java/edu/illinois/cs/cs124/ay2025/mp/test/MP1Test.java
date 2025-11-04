@@ -78,6 +78,88 @@ public final class MP1Test {
   @Graded(points = 10, friendlyName = "Test Summary Sort (Unit)")
   @LazyApplication(LazyApplication.LazyLoad.ON)
   public void test0_testSummarySort() {
+    // Add your tests here
+    // Test with manually created summaries to verify chronological ordering
+    List<Summary> manualTestList = new ArrayList<>();
+
+    // Create summaries with times very close together (1 second apart)
+    Summary laterEventByOneSecond = new Summary(
+        "event3",
+        "Event at 10:00:03",
+        "2025-11-03T10:00:03Z",
+        "Test Location",
+        false
+    );
+
+    Summary middleEventByOneSecond = new Summary(
+        "event2",
+        "Event at 10:00:02",
+        "2025-11-03T10:00:02Z",
+        "Test Location",
+        false
+    );
+
+    Summary earlierEventByOneSecond = new Summary(
+        "event1",
+        "Event at 10:00:01",
+        "2025-11-03T10:00:01Z",
+        "Test Location",
+        false
+    );
+
+    // Add them in random order
+    manualTestList.add(laterEventByOneSecond);
+    manualTestList.add(earlierEventByOneSecond);
+    manualTestList.add(middleEventByOneSecond);
+
+    // Sort the list
+    Collections.sort(manualTestList);
+
+    // Verify they are now in chronological order (earliest first)
+    assertThat(manualTestList.get(0).getId()).isEqualTo("event1");  // 10:00:01
+    assertThat(manualTestList.get(1).getId()).isEqualTo("event2");  // 10:00:02
+    assertThat(manualTestList.get(2).getId()).isEqualTo("event3");  // 10:00:03
+
+    // Test edge case: Two events with the same start time
+    List<Summary> sameDateList = new ArrayList<>();
+
+    Summary firstEventSameTime = new Summary(
+        "eventA",
+        "First Event",
+        "2025-11-20T10:00:00Z",
+        "Location A",
+        false
+    );
+
+    Summary secondEventSameTime = new Summary(
+        "eventB",
+        "Second Event",
+        "2025-11-20T10:00:00Z",
+        "Location B",
+        true
+    );
+
+    Summary differentTimeEvent = new Summary(
+        "eventC",
+        "Different Time Event",
+        "2025-11-20T15:00:00Z",
+        "Location C",
+        false
+    );
+
+    // Add in random order
+    sameDateList.add(secondEventSameTime);
+    sameDateList.add(differentTimeEvent);
+    sameDateList.add(firstEventSameTime);
+
+    Collections.sort(sameDateList);
+
+    // Events with same time should stay stable, but both should come before later event
+    assertThat(sameDateList.get(0).getStart()).isEqualTo("2025-11-20T10:00:00Z");
+    assertThat(sameDateList.get(1).getStart()).isEqualTo("2025-11-20T10:00:00Z");
+    assertThat(sameDateList.get(2).getId()).isEqualTo("eventC");  // Later time comes last
+
+    // Test with provided shuffled summaries
     List<Summary> smallList = getShuffledSummaries(12410, 10);
     Collections.sort(smallList);
 
@@ -91,8 +173,6 @@ public final class MP1Test {
     assertThat(smallList.get(7).getId()).isEqualTo("3aca813563a16a20");
     assertThat(smallList.get(8).getId()).isEqualTo("7d77c89a7bf7e334");
     assertThat(smallList.get(9).getId()).isEqualTo("04b79587f97bcddc");
-
-    // Add your tests here
   }
 
   @Test

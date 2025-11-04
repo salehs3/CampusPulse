@@ -78,7 +78,7 @@ public class Summary implements Comparable<Summary> {
 
   @Override
   public int compareTo(@NonNull Summary other) {
-    return 0;
+    return this.start.compareTo(other.start);
   }
 
   public static List<Summary> filterVirtual(List<Summary> summaries, boolean virtual) {
