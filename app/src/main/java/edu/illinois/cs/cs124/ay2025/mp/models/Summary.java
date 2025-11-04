@@ -80,7 +80,16 @@ public class Summary implements Comparable<Summary> {
 
   @Override
   public int compareTo(@NonNull Summary other) {
-    return this.start.compareTo(other.start);
+    int timeComparison = this.start.compareTo(other.start);
+    if (timeComparison == 0) {
+      // When times are equal, sort by title (case-insensitive, then case-sensitive)
+      int titleComparisonIgnoreCase = this.title.toLowerCase().compareTo(other.title.toLowerCase());
+      if (titleComparisonIgnoreCase == 0) {
+        return this.title.compareTo(other.title);
+      }
+      return titleComparisonIgnoreCase;
+    }
+    return timeComparison;
   }
 
   public static List<Summary> filterVirtual(List<Summary> summaries, boolean virtual) {
@@ -152,7 +161,9 @@ public class Summary implements Comparable<Summary> {
 
         // Look ahead for more location words
         for (int j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].startsWith("location:") || tokens[j].startsWith("virtual:") || tokens[j].contains(":")) {
+          if (tokens[j].startsWith("location:")
+              || tokens[j].startsWith("virtual:")
+              || tokens[j].contains(":")) {
             break;
           }
           locationParts.add(tokens[j]);
