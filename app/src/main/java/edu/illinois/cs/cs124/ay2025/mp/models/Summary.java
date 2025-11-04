@@ -95,7 +95,7 @@ public class Summary implements Comparable<Summary> {
         filteredSummaries.add(summary);
       }
     }
-    return  filteredSummaries;
+    return filteredSummaries;
   }
 
   public static List<Summary> filterTime(List<Summary> summaries, Instant start, Instant end) {
@@ -119,7 +119,7 @@ public class Summary implements Comparable<Summary> {
         filteredSummaries.add(summary);
       }
     }
-    return  filteredSummaries;
+    return filteredSummaries;
   }
 
   private static final class SearchFilters {
@@ -277,13 +277,14 @@ public class Summary implements Comparable<Summary> {
       }
     }
 
-    matchingSummaries.sort((s1, s2) -> {
-      int titleIgnoreCase = s1.title.toLowerCase().compareTo(s2.title.toLowerCase());
-      if (titleIgnoreCase != 0) {
-        return titleIgnoreCase;
-      }
-      return s1.title.compareTo(s2.title);
-    });
+    matchingSummaries.sort(
+        (s1, s2) -> {
+          int titleIgnoreCase = s1.title.compareToIgnoreCase(s2.title);
+          if (titleIgnoreCase != 0) {
+            return titleIgnoreCase;
+          }
+          return s1.title.compareTo(s2.title);
+        });
 
     return matchingSummaries;
   }
