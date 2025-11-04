@@ -82,12 +82,8 @@ public class Summary implements Comparable<Summary> {
   public int compareTo(@NonNull Summary other) {
     int timeComparison = this.start.compareTo(other.start);
     if (timeComparison == 0) {
-      // When times are equal, sort by title (case-insensitive, then case-sensitive)
-      int titleComparisonIgnoreCase = this.title.toLowerCase().compareTo(other.title.toLowerCase());
-      if (titleComparisonIgnoreCase == 0) {
-        return this.title.compareTo(other.title);
-      }
-      return titleComparisonIgnoreCase;
+      // When times are equal, sort by title (case-sensitive)
+      return this.title.compareTo(other.title);
     }
     return timeComparison;
   }
@@ -265,7 +261,18 @@ public class Summary implements Comparable<Summary> {
       }
     }
 
-    Collections.sort(matchingSummaries);
+    // Sort by time first, then by title (case-insensitive primary, case-sensitive tiebreaker)
+    matchingSummaries.sort((s1, s2) -> {
+      int timeComparison = s1.start.compareTo(s2.start);
+      if (timeComparison != 0) {
+        return timeComparison;
+      }
+      int titleIgnoreCase = s1.title.toLowerCase().compareTo(s2.title.toLowerCase());
+      if (titleIgnoreCase != 0) {
+        return titleIgnoreCase;
+      }
+      return s1.title.compareTo(s2.title);
+    });
 
     return matchingSummaries;
   }
