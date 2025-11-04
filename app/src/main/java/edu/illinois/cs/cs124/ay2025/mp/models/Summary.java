@@ -277,14 +277,7 @@ public class Summary implements Comparable<Summary> {
       }
     }
 
-    matchingSummaries.sort(
-        (s1, s2) -> {
-          int titleIgnoreCase = s1.title.compareToIgnoreCase(s2.title);
-          if (titleIgnoreCase != 0) {
-            return titleIgnoreCase;
-          }
-          return s1.title.compareTo(s2.title);
-        });
+    matchingSummaries.sort((s1, s2) -> s1.title.compareTo(s2.title));
 
     return matchingSummaries;
   }
