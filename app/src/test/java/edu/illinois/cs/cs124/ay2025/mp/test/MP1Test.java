@@ -188,6 +188,76 @@ public final class MP1Test {
     assertThat(nonVirtualFiltered.get(0).getVirtual()).isFalse();
 
     // Add your tests here
+    // Test filtering for virtual events (virtual=true)
+    List<Summary> virtualFiltered = Summary.filterVirtual(allSummaries, true);
+    assertThat(virtualFiltered.size()).isEqualTo(105);
+    assertThat(virtualFiltered).isNotSameInstanceAs(allSummaries);
+    assertThat(virtualFiltered.get(0).getVirtual()).isTrue();
+
+    // Test with manually created mock data
+    List<Summary> mockSummaries = new ArrayList<>();
+
+    // Create mock virtual events
+    Summary virtualEvent1 = new Summary(
+        "virtual1",
+        "Online Workshop",
+        "2025-11-05T14:00:00Z",
+        "Zoom",
+        true
+    );
+
+    Summary virtualEvent2 = new Summary(
+        "virtual2",
+        "Virtual Conference",
+        "2025-11-06T10:00:00Z",
+        "Microsoft Teams",
+        true
+    );
+
+    // Create mock in-person events
+    Summary inPersonEvent1 = new Summary(
+        "inperson1",
+        "Campus Lecture",
+        "2025-11-07T15:00:00Z",
+        "Siebel Center",
+        false
+    );
+
+    Summary inPersonEvent2 = new Summary(
+        "inperson2",
+        "Study Session",
+        "2025-11-08T18:00:00Z",
+        "Grainger Library",
+        false
+    );
+
+    // Add all events to the list
+    mockSummaries.add(virtualEvent1);
+    mockSummaries.add(inPersonEvent1);
+    mockSummaries.add(virtualEvent2);
+    mockSummaries.add(inPersonEvent2);
+
+    // Filter for virtual events only
+    List<Summary> mockVirtualFiltered = Summary.filterVirtual(mockSummaries, true);
+    assertThat(mockVirtualFiltered.size()).isEqualTo(2);
+    for (Summary eventSummary : mockVirtualFiltered) {
+      assertThat(eventSummary.getVirtual()).isTrue();
+    }
+
+    // Filter for in-person events only
+    List<Summary> mockInPersonFiltered = Summary.filterVirtual(mockSummaries, false);
+    assertThat(mockInPersonFiltered.size()).isEqualTo(2);
+    for (Summary eventSummary : mockInPersonFiltered) {
+      assertThat(eventSummary.getVirtual()).isFalse();
+    }
+
+    // Test with empty list
+    List<Summary> emptySummaries = new ArrayList<>();
+    List<Summary> emptyVirtualFiltered = Summary.filterVirtual(emptySummaries, true);
+    assertThat(emptyVirtualFiltered.size()).isEqualTo(0);
+
+    List<Summary> emptyInPersonFiltered = Summary.filterVirtual(emptySummaries, false);
+    assertThat(emptyInPersonFiltered.size()).isEqualTo(0);
   }
 
   @Test
@@ -208,6 +278,85 @@ public final class MP1Test {
     assertThat(pastEvents.size()).isEqualTo(452);
 
     // Add your tests here
+    // Test with manually created mock data
+    List<Summary> mockTimeFilterSummaries = new ArrayList<>();
+
+    // Create events at different times
+    Summary earlyMorningEvent = new Summary(
+        "early1",
+        "Early Morning Event",
+        "2025-11-10T06:00:00Z",
+        "Coffee Shop",
+        false
+    );
+
+    Summary midDayEvent = new Summary(
+        "midday1",
+        "Lunch Meeting",
+        "2025-11-10T17:00:00Z",
+        "Restaurant",
+        false
+    );
+
+    Summary eveningEvent = new Summary(
+        "evening1",
+        "Evening Concert",
+        "2025-11-10T23:00:00Z",
+        "Theater",
+        false
+    );
+
+    Summary nextDayEvent = new Summary(
+        "nextday1",
+        "Next Day Event",
+        "2025-11-11T10:00:00Z",
+        "Campus Center",
+        false
+    );
+
+    Summary previousDayEvent = new Summary(
+        "prevday1",
+        "Previous Day Event",
+        "2025-11-09T14:00:00Z",
+        "Library",
+        true
+    );
+
+    // Add all events to the list
+    mockTimeFilterSummaries.add(earlyMorningEvent);
+    mockTimeFilterSummaries.add(midDayEvent);
+    mockTimeFilterSummaries.add(eveningEvent);
+    mockTimeFilterSummaries.add(nextDayEvent);
+    mockTimeFilterSummaries.add(previousDayEvent);
+
+    // Test filtering for events on November 10, 2025
+    Instant nov10Start = Instant.parse("2025-11-10T00:00:00Z");
+    Instant nov10End = Instant.parse("2025-11-10T23:59:59.999Z");
+    List<Summary> nov10Events = Summary.filterTime(mockTimeFilterSummaries, nov10Start, nov10End);
+    assertThat(nov10Events.size()).isEqualTo(3);
+    assertThat(nov10Events.get(0).getId()).isEqualTo("early1");
+    assertThat(nov10Events.get(1).getId()).isEqualTo("midday1");
+    assertThat(nov10Events.get(2).getId()).isEqualTo("evening1");
+
+    // Test filtering for events on or after November 10, 2025 (future events)
+    List<Summary> mockFutureEvents = Summary.filterTime(mockTimeFilterSummaries, nov10Start, null);
+    assertThat(mockFutureEvents.size()).isEqualTo(4);
+
+    // Test filtering for events before or on November 10, 2025 (past events)
+    List<Summary> mockPastEvents = Summary.filterTime(mockTimeFilterSummaries, null, nov10End);
+    assertThat(mockPastEvents.size()).isEqualTo(4);
+
+    // Test with empty list
+    List<Summary> emptyTimeSummaries = new ArrayList<>();
+    List<Summary> emptyTimeFiltered = Summary.filterTime(emptyTimeSummaries, nov10Start, nov10End);
+    assertThat(emptyTimeFiltered.size()).isEqualTo(0);
+
+    // Test with very specific time range (only midday event)
+    Instant specificStart = Instant.parse("2025-11-10T16:00:00Z");
+    Instant specificEnd = Instant.parse("2025-11-10T18:00:00Z");
+    List<Summary> specificTimeEvents = Summary.filterTime(mockTimeFilterSummaries, specificStart, specificEnd);
+    assertThat(specificTimeEvents.size()).isEqualTo(1);
+    assertThat(specificTimeEvents.get(0).getId()).isEqualTo("midday1");
   }
 
   @Test
@@ -215,6 +364,145 @@ public final class MP1Test {
   @Graded(points = 10, friendlyName = "Test Summary Search Basic (Unit)")
   @LazyApplication(LazyApplication.LazyLoad.ON)
   public void test3_testSummarySearchBasic() {
+    // Add your tests here
+    // Test with manually created mock data
+    List<Summary> mockSearchSummaries = new ArrayList<>();
+
+    // Create mock events with different titles and locations
+    Summary basketballGame = new Summary(
+        "event1",
+        "Thursday Basketball Games",
+        "2025-11-15T18:00:00Z",
+        "Sports Center",
+        false
+    );
+
+    Summary boardGameNight = new Summary(
+        "event2",
+        "Thursday Board Games Night",
+        "2025-11-15T19:00:00Z",
+        "Student Union",
+        false
+    );
+
+    Summary coffeeShopEvent = new Summary(
+        "event3",
+        "Study Session",
+        "2025-11-14T10:00:00Z",
+        "Coffee Shop Downtown",
+        false
+    );
+
+    Summary musicConcert = new Summary(
+        "event4",
+        "JAZZ CONCERT",
+        "2025-11-16T20:00:00Z",
+        "Music Hall",
+        false
+    );
+
+    Summary jazzWorkshop = new Summary(
+        "event5",
+        "Jazz Workshop",
+        "2025-11-13T14:00:00Z",
+        "Community Center",
+        false
+    );
+
+    Summary gamesAtLibrary = new Summary(
+        "event6",
+        "Board Games",
+        "2025-11-12T15:00:00Z",
+        "Grainger Library",
+        false
+    );
+
+    // Add all events to the list
+    mockSearchSummaries.add(basketballGame);
+    mockSearchSummaries.add(boardGameNight);
+    mockSearchSummaries.add(coffeeShopEvent);
+    mockSearchSummaries.add(musicConcert);
+    mockSearchSummaries.add(jazzWorkshop);
+    mockSearchSummaries.add(gamesAtLibrary);
+
+    // Test 1: Case-insensitive search by title
+    List<Summary> jazzResults = Summary.search(mockSearchSummaries, "jazz");
+    assertThat(jazzResults.size()).isEqualTo(2);
+    // Results should be sorted by date/time (earliest first)
+    assertThat(jazzResults.get(0).getId()).isEqualTo("event5");  // Nov 13
+    assertThat(jazzResults.get(1).getId()).isEqualTo("event4");  // Nov 16
+
+    // Test 2: Case-insensitive search with uppercase query
+    List<Summary> jazzUppercase = Summary.search(mockSearchSummaries, "JAZZ");
+    assertThat(jazzUppercase.size()).isEqualTo(2);
+    assertThat(jazzUppercase.get(0).getId()).isEqualTo("event5");
+
+    // Test 3: Case-insensitive search with mixed case
+    List<Summary> jazzMixedCase = Summary.search(mockSearchSummaries, "JaZz");
+    assertThat(jazzMixedCase.size()).isEqualTo(2);
+
+    // Test 4: Search by location (case-insensitive)
+    List<Summary> libraryResults = Summary.search(mockSearchSummaries, "library");
+    assertThat(libraryResults.size()).isEqualTo(1);
+    assertThat(libraryResults.get(0).getId()).isEqualTo("event6");
+
+    // Test 5: Search by location with different case
+    List<Summary> coffeeResults = Summary.search(mockSearchSummaries, "COFFEE");
+    assertThat(coffeeResults.size()).isEqualTo(1);
+    assertThat(coffeeResults.get(0).getId()).isEqualTo("event3");
+
+    // Test 6: Continuous word search - "Board Games" should match
+    List<Summary> boardGamesResults = Summary.search(mockSearchSummaries, "Board Games");
+    assertThat(boardGamesResults.size()).isEqualTo(2);
+    // Both "Thursday Board Games Night" and "Board Games" should match
+    assertThat(boardGamesResults.get(0).getId()).isEqualTo("event6");  // Nov 12
+    assertThat(boardGamesResults.get(1).getId()).isEqualTo("event2");  // Nov 15
+
+    // Test 7: Continuous word search - "Thursday Games" should NOT match "Thursday Board Games"
+    List<Summary> thursdayGamesResults = Summary.search(mockSearchSummaries, "Thursday Games");
+    assertThat(thursdayGamesResults.size()).isEqualTo(0);
+    // "Thursday Board Games" has "Board" between "Thursday" and "Games"
+
+    // Test 8: Search with extra spaces should still work
+    List<Summary> jazzWithSpaces = Summary.search(mockSearchSummaries, "  jazz  ");
+    assertThat(jazzWithSpaces.size()).isEqualTo(2);
+
+    // Test 9: Search for full phrase
+    List<Summary> thursdayBoardGames = Summary.search(mockSearchSummaries, "Thursday Board Games");
+    assertThat(thursdayBoardGames.size()).isEqualTo(1);
+    assertThat(thursdayBoardGames.get(0).getId()).isEqualTo("event2");
+
+    // Test 10: Search that matches both title and location
+    List<Summary> boardResults = Summary.search(mockSearchSummaries, "board");
+    assertThat(boardResults.size()).isEqualTo(2);
+    assertThat(boardResults.get(0).getId()).isEqualTo("event6");  // Nov 12
+    assertThat(boardResults.get(1).getId()).isEqualTo("event2");  // Nov 15
+
+    // Test 11: Empty search query returns all events sorted by date
+    List<Summary> emptySearchResults = Summary.search(mockSearchSummaries, "");
+    assertThat(emptySearchResults.size()).isEqualTo(6);
+    // Verify chronological order by checking dates
+    assertThat(emptySearchResults.get(0).getStart()).isEqualTo("2025-11-12T15:00:00Z");  // Nov 12
+    assertThat(emptySearchResults.get(1).getStart()).isEqualTo("2025-11-13T14:00:00Z");  // Nov 13
+    assertThat(emptySearchResults.get(2).getStart()).isEqualTo("2025-11-14T10:00:00Z");  // Nov 14
+    assertThat(emptySearchResults.get(3).getStart()).isEqualTo("2025-11-15T18:00:00Z");  // Nov 15 18:00
+    assertThat(emptySearchResults.get(4).getStart()).isEqualTo("2025-11-15T19:00:00Z");  // Nov 15 19:00
+    assertThat(emptySearchResults.get(5).getStart()).isEqualTo("2025-11-16T20:00:00Z");  // Nov 16
+
+    // Test 12: Search with no matches
+    List<Summary> noMatchResults = Summary.search(mockSearchSummaries, "Swimming");
+    assertThat(noMatchResults.size()).isEqualTo(0);
+
+    // Test 13: Search for partial word at beginning
+    List<Summary> studyResults = Summary.search(mockSearchSummaries, "Study");
+    assertThat(studyResults.size()).isEqualTo(1);
+    assertThat(studyResults.get(0).getId()).isEqualTo("event3");
+
+    // Test 14: Multiple spaces between words in query
+    List<Summary> multipleSpaces = Summary.search(mockSearchSummaries, "Board    Games");
+    assertThat(multipleSpaces.size()).isEqualTo(2);
+
+    // Original provided tests
     List<Summary> allEvents = Summary.search(SUMMARIES, "");
     assertThat(allEvents.size()).isEqualTo(2756);
     assertThat(allEvents).isNotSameInstanceAs(SUMMARIES);
@@ -223,8 +511,6 @@ public final class MP1Test {
     assertThat(exhibitResults.size()).isEqualTo(209);
     assertThat(exhibitResults.getFirst().getId()).isEqualTo("9f6535630fbe18ad");
     assertThat(exhibitResults.getLast().getId()).isEqualTo("a536590b0211d019");
-
-    // Add your tests here
   }
 
   @Test
@@ -232,6 +518,141 @@ public final class MP1Test {
   @Graded(points = 20, friendlyName = "Test Summary Search Filters (Unit)")
   @LazyApplication(LazyApplication.LazyLoad.ON)
   public void test4_testSummarySearchFilters() {
+    // Add your tests here
+    // Test with manually created mock data
+    List<Summary> mockFilterSummaries = new ArrayList<>();
+
+    // Create mock events at different locations with different virtual status
+    Summary unionVirtualEvent = new Summary(
+        "filter1",
+        "Online Lecture Series",
+        "2025-11-20T14:00:00Z",
+        "Union Building",
+        true
+    );
+
+    Summary unionInPersonEvent = new Summary(
+        "filter2",
+        "Board Game Night",
+        "2025-11-21T19:00:00Z",
+        "Illinois Union",
+        false
+    );
+
+    Summary graingerVirtualEvent = new Summary(
+        "filter3",
+        "Virtual Study Group",
+        "2025-11-22T10:00:00Z",
+        "Grainger Library",
+        true
+    );
+
+    Summary graingerInPersonEvent = new Summary(
+        "filter4",
+        "Coffee Chat",
+        "2025-11-23T15:00:00Z",
+        "Grainger Library Main Floor",
+        false
+    );
+
+    Summary siebelInPersonEvent = new Summary(
+        "filter5",
+        "Programming Workshop",
+        "2025-11-24T16:00:00Z",
+        "Siebel Center",
+        false
+    );
+
+    Summary coffeeShopEvent = new Summary(
+        "filter6",
+        "Coffee Tasting Event",
+        "2025-11-25T11:00:00Z",
+        "Downtown Cafe",
+        false
+    );
+
+    // Add all events to the list
+    mockFilterSummaries.add(unionVirtualEvent);
+    mockFilterSummaries.add(unionInPersonEvent);
+    mockFilterSummaries.add(graingerVirtualEvent);
+    mockFilterSummaries.add(graingerInPersonEvent);
+    mockFilterSummaries.add(siebelInPersonEvent);
+    mockFilterSummaries.add(coffeeShopEvent);
+
+    // Test 1: location:union - search for events at location union
+    List<Summary> mockUnionResults = Summary.search(mockFilterSummaries, "location:union");
+    assertThat(mockUnionResults.size()).isEqualTo(2);
+    assertThat(mockUnionResults.get(0).getId()).isEqualTo("filter1");
+    assertThat(mockUnionResults.get(1).getId()).isEqualTo("filter2");
+
+    // Test 2: location:grainger - search for locations with grainger
+    List<Summary> mockGraingerResults = Summary.search(mockFilterSummaries, "location:grainger");
+    assertThat(mockGraingerResults.size()).isEqualTo(2);
+    assertThat(mockGraingerResults.get(0).getId()).isEqualTo("filter3");
+    assertThat(mockGraingerResults.get(1).getId()).isEqualTo("filter4");
+
+    // Test 3: board location:union - search for "board" in title with location union
+    List<Summary> mockBoardUnion = Summary.search(mockFilterSummaries, "board location:union");
+    assertThat(mockBoardUnion.size()).isEqualTo(1);
+    assertThat(mockBoardUnion.get(0).getId()).isEqualTo("filter2");
+
+    // Test 4: location:union board - should NOT work like "board location:union"
+    List<Summary> mockUnionBoard = Summary.search(mockFilterSummaries, "location:union board");
+    assertThat(mockUnionBoard.size()).isEqualTo(0);
+
+    // Test 5: location:grainger library - spaces between words in location filter
+    List<Summary> mockGraingerLibrary = Summary.search(mockFilterSummaries, "location:grainger library");
+    assertThat(mockGraingerLibrary.size()).isEqualTo(2);
+
+    // Test 6: virtual:true - show virtual events
+    List<Summary> mockVirtualTrue = Summary.search(mockFilterSummaries, "virtual:true");
+    assertThat(mockVirtualTrue.size()).isEqualTo(2);
+    assertThat(mockVirtualTrue.get(0).getId()).isEqualTo("filter1");
+    assertThat(mockVirtualTrue.get(1).getId()).isEqualTo("filter3");
+
+    // Test 7: virtual:false - show non-virtual events
+    List<Summary> mockVirtualFalse = Summary.search(mockFilterSummaries, "virtual:false");
+    assertThat(mockVirtualFalse.size()).isEqualTo(4);
+
+    // Test 8: virtual:blah - invalid virtual value, no matches
+    List<Summary> mockVirtualInvalid = Summary.search(mockFilterSummaries, "virtual:blah");
+    assertThat(mockVirtualInvalid.size()).isEqualTo(0);
+
+    // Test 9: location:union virtual:false - non-virtual events at union
+    List<Summary> mockUnionNotVirtual = Summary.search(mockFilterSummaries, "location:union virtual:false");
+    assertThat(mockUnionNotVirtual.size()).isEqualTo(1);
+    assertThat(mockUnionNotVirtual.get(0).getId()).isEqualTo("filter2");
+
+    // Test 10: location:union virtual:true - virtual events at union
+    List<Summary> mockUnionVirtual = Summary.search(mockFilterSummaries, "location:union virtual:true");
+    assertThat(mockUnionVirtual.size()).isEqualTo(1);
+    assertThat(mockUnionVirtual.get(0).getId()).isEqualTo("filter1");
+
+    // Test 11: location:union virtual:blah - no matches due to invalid virtual
+    List<Summary> mockUnionVirtualInvalid = Summary.search(mockFilterSummaries, "location:union virtual:blah");
+    assertThat(mockUnionVirtualInvalid.size()).isEqualTo(0);
+
+    // Test 12: Coffee:drink - looks like filter but not valid, no matches
+    List<Summary> mockCoffeeDrink = Summary.search(mockFilterSummaries, "Coffee:drink");
+    assertThat(mockCoffeeDrink.size()).isEqualTo(0);
+
+    // Test 13: location:union Coffee:drink - no matches due to invalid filter
+    List<Summary> mockUnionCoffeeDrink = Summary.search(mockFilterSummaries, "location:union Coffee:drink");
+    assertThat(mockUnionCoffeeDrink.size()).isEqualTo(0);
+
+    // Test 14: location:     grainger     library - extra spaces should work
+    List<Summary> mockGraingerSpaces = Summary.search(mockFilterSummaries, "location:     grainger     library");
+    assertThat(mockGraingerSpaces.size()).isEqualTo(2);
+
+    // Test 15: Case insensitive filters - location:UNION
+    List<Summary> mockUnionUppercase = Summary.search(mockFilterSummaries, "location:UNION");
+    assertThat(mockUnionUppercase.size()).isEqualTo(2);
+
+    // Test 16: Case insensitive filters - VIRTUAL:TRUE
+    List<Summary> mockVirtualUppercase = Summary.search(mockFilterSummaries, "VIRTUAL:TRUE");
+    assertThat(mockVirtualUppercase.size()).isEqualTo(2);
+
+    // Original provided tests
     List<Summary> unionResults = Summary.search(SUMMARIES, "location:union");
     assertThat(unionResults.size()).isEqualTo(108);
 
@@ -240,8 +661,6 @@ public final class MP1Test {
 
     List<Summary> coffeeAtUnion = Summary.search(SUMMARIES, "coffee location:union");
     assertThat(coffeeAtUnion.size()).isEqualTo(0);
-
-    // Add your tests here
   }
 
   @Test
