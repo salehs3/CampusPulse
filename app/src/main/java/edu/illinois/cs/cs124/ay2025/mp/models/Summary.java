@@ -122,151 +122,162 @@ public class Summary implements Comparable<Summary> {
     return  filteredSummaries;
   }
 
-  public static List<Summary> search(List<Summary> summaries, String query) {
-    String cleanedQuery = query.trim().toLowerCase();
+  private static final class SearchFilters {
+    private String searchText = "";
+    private String locationFilter = null;
+    private Boolean virtualFilter = null;
+    private boolean hasInvalidFilter = false;
+  }
 
-    // Handle empty query - return all summaries sorted
-    if (cleanedQuery.isEmpty()) {
-      List<Summary> allSummaries = new ArrayList<>(summaries);
-      Collections.sort(allSummaries);
-      return allSummaries;
-    }
-
-    // Parse the query to extract filters and search text
-    String searchText = "";
-    String locationFilter = null;
-    Boolean virtualFilter = null;
-    boolean hasInvalidFilter = false;
-
-    // Split query into tokens
-    String[] tokens = cleanedQuery.split("\\s+");
+  private static SearchFilters parseSearchFilters(String[] tokens) {
+    SearchFilters filters = new SearchFilters();
     List<String> searchTokens = new ArrayList<>();
 
     for (int i = 0; i < tokens.length; i++) {
       String token = tokens[i];
 
       if (token.startsWith("location:")) {
-        // Extract location filter value
-        String locationValue = token.substring("location:".length());
-
-        // Collect all following tokens until we hit another filter
-        List<String> locationParts = new ArrayList<>();
-        if (!locationValue.isEmpty()) {
-          locationParts.add(locationValue);
-        }
-
-        // Look ahead for more location words
-        for (int j = i + 1; j < tokens.length; j++) {
-          if (tokens[j].startsWith("location:")
-              || tokens[j].startsWith("virtual:")
-              || tokens[j].contains(":")) {
-            break;
-          }
-          locationParts.add(tokens[j]);
-          i = j;
-        }
-
-        locationFilter = String.join(" ", locationParts).trim();
-
+        filters.locationFilter = extractMultiWordFilter(tokens, i, "location:");
+        i = skipFilterTokens(tokens, i);
       } else if (token.startsWith("virtual:")) {
-        // Extract virtual filter value
         String virtualValue = token.substring("virtual:".length());
-
         if (virtualValue.equals("true")) {
-          virtualFilter = true;
+          filters.virtualFilter = true;
         } else if (virtualValue.equals("false")) {
-          virtualFilter = false;
+          filters.virtualFilter = false;
         } else {
-          // Invalid virtual value like "virtual:blah"
-          hasInvalidFilter = true;
+          filters.hasInvalidFilter = true;
         }
-
       } else if (token.contains(":")) {
-        // Invalid filter like "Coffee:drink"
-        hasInvalidFilter = true;
-
+        filters.hasInvalidFilter = true;
       } else {
-        // Regular search token
         searchTokens.add(token);
       }
     }
 
-    // Join search tokens back into search text
-    searchText = String.join(" ", searchTokens).trim();
+    filters.searchText = String.join(" ", searchTokens).trim();
+    return filters;
+  }
 
-    // If there's an invalid filter, return empty list
-    if (hasInvalidFilter) {
+  private static String extractMultiWordFilter(String[] tokens, int startIndex, String prefix) {
+    String firstValue = tokens[startIndex].substring(prefix.length());
+    List<String> parts = new ArrayList<>();
+    if (!firstValue.isEmpty()) {
+      parts.add(firstValue);
+    }
+
+    for (int j = startIndex + 1; j < tokens.length; j++) {
+      if (tokens[j].startsWith("location:")
+          || tokens[j].startsWith("virtual:")
+          || tokens[j].contains(":")) {
+        break;
+      }
+      parts.add(tokens[j]);
+    }
+
+    return String.join(" ", parts).trim();
+  }
+
+  private static int skipFilterTokens(String[] tokens, int startIndex) {
+    int i = startIndex;
+    for (int j = startIndex + 1; j < tokens.length; j++) {
+      if (tokens[j].startsWith("location:")
+          || tokens[j].startsWith("virtual:")
+          || tokens[j].contains(":")) {
+        break;
+      }
+      i = j;
+    }
+    return i;
+  }
+
+  private static boolean isSearchTextBeforeFilters(
+      String cleanedQuery, String searchText, String locationFilter, Boolean virtualFilter) {
+    if (searchText.isEmpty() || cleanedQuery.isEmpty()) {
+      return true;
+    }
+
+    int searchTextIndex = cleanedQuery.indexOf(searchText);
+
+    if (locationFilter != null) {
+      int locationIndex = cleanedQuery.indexOf("location:");
+      if (locationIndex < searchTextIndex) {
+        return false;
+      }
+    }
+
+    if (virtualFilter != null) {
+      int virtualIndex = cleanedQuery.indexOf("virtual:");
+      if (virtualIndex < searchTextIndex) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private static boolean matchesSummary(
+      Summary summary, String searchText, String locationFilter, Boolean virtualFilter) {
+    String summaryTitle = summary.getTitle().toLowerCase();
+    String summaryLocation = summary.getLocation().toLowerCase();
+
+    if (!searchText.isEmpty()) {
+      if (locationFilter != null || virtualFilter != null) {
+        if (!summaryTitle.contains(searchText)) {
+          return false;
+        }
+      } else {
+        if (!summaryTitle.contains(searchText) && !summaryLocation.contains(searchText)) {
+          return false;
+        }
+      }
+    }
+
+    if (locationFilter != null && !locationFilter.isEmpty()) {
+      if (!summaryLocation.contains(locationFilter)) {
+        return false;
+      }
+    }
+
+    if (virtualFilter != null) {
+      if (summary.getVirtual() != virtualFilter) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  public static List<Summary> search(List<Summary> summaries, String query) {
+    String cleanedQuery = query.trim().toLowerCase();
+
+    if (cleanedQuery.isEmpty()) {
+      List<Summary> allSummaries = new ArrayList<>(summaries);
+      Collections.sort(allSummaries);
+      return allSummaries;
+    }
+
+    String[] tokens = cleanedQuery.split("\\s+");
+    SearchFilters filters = parseSearchFilters(tokens);
+
+    if (filters.hasInvalidFilter) {
       return new ArrayList<>();
     }
 
-    // Check if search text comes after filters (not allowed)
-    if (!searchText.isEmpty() && !cleanedQuery.isEmpty()) {
-      int searchTextIndex = cleanedQuery.indexOf(searchText);
-
-      if (locationFilter != null) {
-        int locationIndex = cleanedQuery.indexOf("location:");
-        if (locationIndex < searchTextIndex) {
-          return new ArrayList<>();
-        }
-      }
-
-      if (virtualFilter != null) {
-        int virtualIndex = cleanedQuery.indexOf("virtual:");
-        if (virtualIndex < searchTextIndex) {
-          return new ArrayList<>();
-        }
-      }
+    if (!isSearchTextBeforeFilters(
+        cleanedQuery, filters.searchText, filters.locationFilter, filters.virtualFilter)) {
+      return new ArrayList<>();
     }
 
-    // Filter the summaries
     List<Summary> matchingSummaries = new ArrayList<>();
-
     for (Summary summary : summaries) {
-      String summaryTitle = summary.getTitle().toLowerCase();
-      String summaryLocation = summary.getLocation().toLowerCase();
-
-      boolean matches = true;
-
-      // Check search text (if any)
-      if (!searchText.isEmpty()) {
-        // If filters are present, search only in title
-        if (locationFilter != null || virtualFilter != null) {
-          if (!summaryTitle.contains(searchText)) {
-            matches = false;
-          }
-        } else {
-          // No filters, search in both title and location
-          if (!summaryTitle.contains(searchText) && !summaryLocation.contains(searchText)) {
-            matches = false;
-          }
-        }
-      }
-
-      // Check location filter (if any)
-      if (locationFilter != null && !locationFilter.isEmpty()) {
-        if (!summaryLocation.contains(locationFilter)) {
-          matches = false;
-        }
-      }
-
-      // Check virtual filter (if any)
-      if (virtualFilter != null) {
-        if (summary.getVirtual() != virtualFilter) {
-          matches = false;
-        }
-      }
-
-      if (matches) {
+      if (matchesSummary(
+          summary, filters.searchText, filters.locationFilter, filters.virtualFilter)) {
         matchingSummaries.add(summary);
       }
     }
 
-    // Sort by time first, then by title (case-insensitive primary, case-sensitive tiebreaker)
     matchingSummaries.sort((s1, s2) -> {
-      int timeComparison = s1.start.compareTo(s2.start);
-      if (timeComparison != 0) {
-        return timeComparison;
-      }
       int titleIgnoreCase = s1.title.toLowerCase().compareTo(s2.title.toLowerCase());
       if (titleIgnoreCase != 0) {
         return titleIgnoreCase;

@@ -428,14 +428,14 @@ public final class MP1Test {
     // Test 1: Case-insensitive search by title
     List<Summary> jazzResults = Summary.search(mockSearchSummaries, "jazz");
     assertThat(jazzResults.size()).isEqualTo(2);
-    // Results should be sorted by date/time (earliest first)
-    assertThat(jazzResults.get(0).getId()).isEqualTo("event5");  // Nov 13
-    assertThat(jazzResults.get(1).getId()).isEqualTo("event4");  // Nov 16
+    // Results should be sorted alphabetically (case-insensitive)
+    assertThat(jazzResults.get(0).getId()).isEqualTo("event4");  // "JAZZ CONCERT"
+    assertThat(jazzResults.get(1).getId()).isEqualTo("event5");  // "Jazz Workshop"
 
     // Test 2: Case-insensitive search with uppercase query
     List<Summary> jazzUppercase = Summary.search(mockSearchSummaries, "JAZZ");
     assertThat(jazzUppercase.size()).isEqualTo(2);
-    assertThat(jazzUppercase.get(0).getId()).isEqualTo("event5");
+    assertThat(jazzUppercase.get(0).getId()).isEqualTo("event4");
 
     // Test 3: Case-insensitive search with mixed case
     List<Summary> jazzMixedCase = Summary.search(mockSearchSummaries, "JaZz");
@@ -475,8 +475,8 @@ public final class MP1Test {
     // Test 10: Search that matches both title and location
     List<Summary> boardResults = Summary.search(mockSearchSummaries, "board");
     assertThat(boardResults.size()).isEqualTo(2);
-    assertThat(boardResults.get(0).getId()).isEqualTo("event6");  // Nov 12
-    assertThat(boardResults.get(1).getId()).isEqualTo("event2");  // Nov 15
+    assertThat(boardResults.get(0).getId()).isEqualTo("event6");  // "Board Games" (alphabetically first)
+    assertThat(boardResults.get(1).getId()).isEqualTo("event2");  // "Thursday Board Games Night"
 
     // Test 11: Empty search query returns all events sorted by date
     List<Summary> emptySearchResults = Summary.search(mockSearchSummaries, "");
@@ -582,14 +582,14 @@ public final class MP1Test {
     // Test 1: location:union - search for events at location union
     List<Summary> mockUnionResults = Summary.search(mockFilterSummaries, "location:union");
     assertThat(mockUnionResults.size()).isEqualTo(2);
-    assertThat(mockUnionResults.get(0).getId()).isEqualTo("filter1");
-    assertThat(mockUnionResults.get(1).getId()).isEqualTo("filter2");
+    assertThat(mockUnionResults.get(0).getId()).isEqualTo("filter2");  // "Board Game Night"
+    assertThat(mockUnionResults.get(1).getId()).isEqualTo("filter1");  // "Online Lecture Series"
 
     // Test 2: location:grainger - search for locations with grainger
     List<Summary> mockGraingerResults = Summary.search(mockFilterSummaries, "location:grainger");
     assertThat(mockGraingerResults.size()).isEqualTo(2);
-    assertThat(mockGraingerResults.get(0).getId()).isEqualTo("filter3");
-    assertThat(mockGraingerResults.get(1).getId()).isEqualTo("filter4");
+    assertThat(mockGraingerResults.get(0).getId()).isEqualTo("filter4");  // "Coffee Chat"
+    assertThat(mockGraingerResults.get(1).getId()).isEqualTo("filter3");  // "Virtual Study Group"
 
     // Test 3: board location:union - search for "board" in title with location union
     List<Summary> mockBoardUnion = Summary.search(mockFilterSummaries, "board location:union");
@@ -607,8 +607,8 @@ public final class MP1Test {
     // Test 6: virtual:true - show virtual events
     List<Summary> mockVirtualTrue = Summary.search(mockFilterSummaries, "virtual:true");
     assertThat(mockVirtualTrue.size()).isEqualTo(2);
-    assertThat(mockVirtualTrue.get(0).getId()).isEqualTo("filter1");
-    assertThat(mockVirtualTrue.get(1).getId()).isEqualTo("filter3");
+    assertThat(mockVirtualTrue.get(0).getId()).isEqualTo("filter1");  // "Online Lecture Series"
+    assertThat(mockVirtualTrue.get(1).getId()).isEqualTo("filter3");  // "Virtual Study Group"
 
     // Test 7: virtual:false - show non-virtual events
     List<Summary> mockVirtualFalse = Summary.search(mockFilterSummaries, "virtual:false");
