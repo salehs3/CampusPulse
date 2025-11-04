@@ -148,8 +148,6 @@ public class Summary implements Comparable<Summary> {
         } else {
           filters.hasInvalidFilter = true;
         }
-      } else if (token.contains(":")) {
-        filters.hasInvalidFilter = true;
       } else {
         searchTokens.add(token);
       }
