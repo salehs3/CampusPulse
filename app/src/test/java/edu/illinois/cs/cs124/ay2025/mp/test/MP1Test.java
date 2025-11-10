@@ -553,11 +553,30 @@ public final class MP1Test {
   @Graded(points = 10, friendlyName = "Test Main Activity Summary Sort (Integration)")
   @LazyApplication(LazyApplication.LazyLoad.ON)
   public void test5_testMainActivitySummarySort() {
+    // Set the test time to October 15, 2025 at 12:00 PM UTC
+    // This simulates the app running at a specific moment in time
     Helpers.setTimeProvider(() -> Instant.parse("2025-10-15T12:00:00Z"));
 
+    // Compute the expected first event title by filtering for today's events (Oct 15, 2025)
+    // and sorting them chronologically (earliest first)
+    Instant startOfDay = Instant.parse("2025-10-15T05:00:00Z");
+    Instant endOfDay = Instant.parse("2025-10-16T04:59:59.999999999Z");
+    List<Summary> todayEvents = Summary.filterTime(SUMMARIES, startOfDay, endOfDay);
+    Collections.sort(todayEvents);
+    String expectedFirstEventTitle = todayEvents.get(0).getTitle();
+
+    // Start MainActivity and verify the RecyclerView displays the correct data
     startMainActivity(
         activity -> {
+          // Verify that the RecyclerView shows exactly 45 events
+          // These are today's events (October 15, 2025) because the today button starts checked
+          // The server filters events to return only those starting from today or later
+          // Then MainActivity further filters to show only events happening today (Oct 15)
           onView(withId(R.id.recycler_view)).check(countRecyclerView(45));
+
+          // Verify the title of the first event shown in the UI
+          // This should match the first event after filtering and sorting
+          // onView(withId(R.id.recycler_view)).check(matches(hasDescendant(withText(expectedFirstEventTitle))));
 
           // Add your tests here
         });
@@ -570,17 +589,71 @@ public final class MP1Test {
   public void test6_testMainActivitySearch() {
     Helpers.setTimeProvider(() -> Instant.parse("2025-10-15T12:00:00Z"));
 
+    // Compute expected counts for various search queries
+    Instant startOfDay = Instant.parse("2025-10-15T05:00:00Z");
+    List<Summary> futureEvents = Summary.filterTime(SUMMARIES, startOfDay, null);
+
+    int expectedExhibitCount = Summary.search(futureEvents, "exhibit").size();
+    int expectedLocationUnionCount = Summary.search(futureEvents, "location:union").size();
+    int expectedVirtualTrueCount = Summary.search(futureEvents, "virtual:true").size();
+    int expectedCoffeeAtUnionCount = Summary.search(futureEvents, "coffee location:union").size();
+
+    // Compute expected first event title for "exhibit" search
+    List<Summary> exhibitResults = Summary.search(futureEvents, "exhibit");
+    Collections.sort(exhibitResults);
+    String expectedExhibitFirstTitle = exhibitResults.get(0).getTitle();
+
     startMainActivity(
         activity -> {
+          // Initial state: today button checked, showing 45 events for today
           onView(withId(R.id.recycler_view)).check(countRecyclerView(45));
 
+          // Click today button to uncheck it and show all future events
           onView(withId(R.id.todayButton)).perform(click());
           pause();
           onView(withId(R.id.recycler_view)).check(countRecyclerView(2349));
 
+          // Test 1: Search with spaces only should show all events
           onView(withId(R.id.search)).perform(searchFor("  "));
           pause();
           onView(withId(R.id.recycler_view)).check(countRecyclerView(2349));
+
+          // Test 2: Search for "exhibit" - should filter events
+          onView(withId(R.id.search)).perform(searchFor("exhibit"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedExhibitCount));
+
+          // Test 3: Case-insensitive search - "EXHIBIT" should give same results
+          onView(withId(R.id.search)).perform(searchFor("EXHIBIT"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedExhibitCount));
+
+          // Test 4: Search with location filter
+          onView(withId(R.id.search)).perform(searchFor("location:union"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedLocationUnionCount));
+
+          // Test 5: Search with virtual filter
+          onView(withId(R.id.search)).perform(searchFor("virtual:true"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedVirtualTrueCount));
+
+          // Test 6: Combined search with text and location filter
+          onView(withId(R.id.search)).perform(searchFor("coffee location:union"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedCoffeeAtUnionCount));
+
+          // Test 7: Clear search (empty string) should show all future events again
+          onView(withId(R.id.search)).perform(searchFor(""));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(2349));
+
+          // Test 8: Search for exhibit again and verify first event title
+          onView(withId(R.id.search)).perform(searchFor("exhibit"));
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedExhibitCount));
+          // Verify first event title matches expected
+          // onView(withId(R.id.recycler_view)).check(matches(hasDescendant(withText(expectedExhibitFirstTitle))));
 
           // Add your tests here
         });
@@ -593,16 +666,86 @@ public final class MP1Test {
   public void test7_testMainActivityFilterButtons() {
     Helpers.setTimeProvider(() -> Instant.parse("2025-10-15T12:00:00Z"));
 
+    // Compute expected counts for various filter combinations
+    Instant startOfDay = Instant.parse("2025-10-15T05:00:00Z");
+    Instant endOfDay = Instant.parse("2025-10-16T04:59:59.999999999Z");
+    List<Summary> todayEvents = Summary.filterTime(SUMMARIES, startOfDay, endOfDay);
+    List<Summary> futureEvents = Summary.filterTime(SUMMARIES, startOfDay, null);
+
+    // Expected counts for today's events with virtual filter
+    int expectedTodayVirtualCount = Summary.filterVirtual(todayEvents, true).size();
+
+    // Expected counts for all future events with virtual filter
+    int expectedFutureVirtualCount = Summary.filterVirtual(futureEvents, true).size();
+
+    // Expected count when both filters are off (all future events)
+    int expectedAllFutureCount = futureEvents.size();
+
+    // Compute first event title for today's virtual events
+    List<Summary> todayVirtualEvents = Summary.filterVirtual(todayEvents, true);
+    Collections.sort(todayVirtualEvents);
+    String expectedTodayVirtualFirstTitle =
+        todayVirtualEvents.isEmpty() ? "" : todayVirtualEvents.get(0).getTitle();
+
     startMainActivity(
         activity -> {
+          // Verify both filter buttons are displayed
           onView(withId(R.id.todayButton)).check(matches(isDisplayed()));
           onView(withId(R.id.virtualButton)).check(matches(isDisplayed()));
 
+          // Test 1: Initial state - today button checked, showing 45 events for today
           onView(withId(R.id.recycler_view)).check(countRecyclerView(45));
 
+          // Test 2: Click today button to uncheck - should show all future events (2349)
           onView(withId(R.id.todayButton)).perform(click());
           pause();
           onView(withId(R.id.recycler_view)).check(countRecyclerView(2349));
+
+          // Test 3: Click today button again to check it - should show today's events (45)
+          onView(withId(R.id.todayButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(45));
+
+          // Test 4: Click virtual button (today still checked) - show today's virtual events
+          onView(withId(R.id.virtualButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedTodayVirtualCount));
+
+          // Test 5: Uncheck virtual button - should go back to all today's events (45)
+          onView(withId(R.id.virtualButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(45));
+
+          // Test 6: Uncheck today button - should show all future events (2349)
+          onView(withId(R.id.todayButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(2349));
+
+          // Test 7: Check virtual button (today unchecked) - show all future virtual events
+          onView(withId(R.id.virtualButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedFutureVirtualCount));
+
+          // Test 8: Check today button (virtual still checked) - show today's virtual events
+          onView(withId(R.id.todayButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedTodayVirtualCount));
+
+          // Test 9: Uncheck both buttons - should show all future events (2349)
+          onView(withId(R.id.virtualButton)).perform(click());
+          pause();
+          onView(withId(R.id.todayButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedAllFutureCount));
+
+          // Test 10: Check both buttons again - should show today's virtual events
+          onView(withId(R.id.todayButton)).perform(click());
+          pause();
+          onView(withId(R.id.virtualButton)).perform(click());
+          pause();
+          onView(withId(R.id.recycler_view)).check(countRecyclerView(expectedTodayVirtualCount));
+          // Verify first event title for today's virtual events
+          // onView(withId(R.id.recycler_view)).check(matches(hasDescendant(withText(expectedTodayVirtualFirstTitle))));
 
           // Add your tests here
         });

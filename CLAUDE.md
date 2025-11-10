@@ -105,6 +105,7 @@ After changing the checkpoint in grade.yaml, sync the project: File → Sync Pro
 - **No direct time calls**: Always use `Helpers.getTimeProvider().now()` (enforced by `checkTimeProvider` task)
 - **Use proper imports**: Always use import statements at the top of files instead of fully qualified class names in the code body (e.g., `import java.util.List;` then use `List`, not `java.util.List` in code)
 - **Descriptive variable names**: Always use clear, descriptive variable names that convey purpose and meaning (e.g., `eventSummaries` instead of `list`, `startDateTime` instead of `dt`)
+- **No ternary operators**: Never use ternary/conditional operators (`? :`). Always use if-else statements instead (enforced by checkstyle AvoidInlineConditionals rule)
 - **Checkstyle required**: Code must pass checkstyle verification (10 points of grade)
 - **Early deadlines**: Checkpoints 2 and 3 have early deadline bonuses (10 points each)
 - **ASCII paths only**: Project path, Android SDK path, and Gradle home must contain only ASCII characters (verified by `checkPaths` task)

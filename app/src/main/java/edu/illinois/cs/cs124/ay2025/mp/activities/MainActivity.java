@@ -5,25 +5,46 @@ import android.graphics.Insets;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.WindowInsets;
+import android.widget.SearchView;
+import android.widget.ToggleButton;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import edu.illinois.cs.cs124.ay2025.mp.R;
 import edu.illinois.cs.cs124.ay2025.mp.adapters.SummaryListAdapter;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
+import edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers;
 import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Collections;
 import java.util.List;
 
-public final class MainActivity extends Activity {
+public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
   private static final String TAG = MainActivity.class.getSimpleName();
+
+  // Alpha value for inactive (unchecked) buttons
+  private static final float BUTTON_ALPHA_INACTIVE = 0.3f;
+
+  // Alpha value for active (checked) buttons
+  private static final float BUTTON_ALPHA_ACTIVE = 1.0f;
 
   // Stores the list of event summaries we get from the server (starts empty)
   private List<Summary> summaries = Collections.emptyList();
 
   // The adapter connects our data (summaries) to the RecyclerView (the scrollable list)
   private SummaryListAdapter listAdapter;
+
+  // Tracks whether the today filter button is checked (true = show only today's events)
+  private boolean isTodayChecked = true;
+
+  // Tracks whether the virtual filter button is checked (true = show only virtual/online events)
+  private boolean isVirtualChecked = false;
+
+  // Stores the current search query text (empty string means no search filter)
+  private String currentSearchQuery = "";
 
   /**
    * onCreate is called ONCE when the activity is first created (part of the startup process). This
@@ -58,6 +79,58 @@ public final class MainActivity extends Activity {
               v.setPadding(insets.left, insets.top, insets.right, insets.bottom);
               return WindowInsets.CONSUMED;
             });
+
+    // Set up the search view with query text listener
+    SearchView searchView = findViewById(R.id.search);
+    searchView.setOnQueryTextListener(this);
+
+    // Set up the calendar button (today filter) click handler
+    ToggleButton calendarButton = findViewById(R.id.todayButton);
+    calendarButton.setChecked(true);
+    calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+    calendarButton.setOnClickListener(
+        (v) -> {
+          // Handle calendar button click
+          ToggleButton button = (ToggleButton) v;
+          boolean isChecked = button.isChecked();
+
+          // Update button appearance based on checked state
+          if (isChecked) {
+            button.setAlpha(BUTTON_ALPHA_ACTIVE);
+          } else {
+            button.setAlpha(BUTTON_ALPHA_INACTIVE);
+          }
+
+          // Log the button state for debugging
+          Log.d(TAG, "Calendar button clicked. Showing today's events: " + isChecked);
+
+          // Update the today filter state and refresh the displayed events
+          isTodayChecked = isChecked;
+          updateDisplayedSummaries();
+        });
+
+    // Set up the virtual button (virtual/online events filter) click handler
+    ToggleButton virtualButton = findViewById(R.id.virtualButton);
+    virtualButton.setOnClickListener(
+        (v) -> {
+          // Handle virtual button click
+          ToggleButton button = (ToggleButton) v;
+          boolean isChecked = button.isChecked();
+
+          // Update button appearance based on checked state
+          if (isChecked) {
+            button.setAlpha(BUTTON_ALPHA_ACTIVE);
+          } else {
+            button.setAlpha(BUTTON_ALPHA_INACTIVE);
+          }
+
+          // Log the button state for debugging
+          Log.d(TAG, "Virtual button clicked. Showing virtual events: " + isChecked);
+
+          // Update the virtual filter state and refresh the displayed events
+          isVirtualChecked = isChecked;
+          updateDisplayedSummaries();
+        });
   }
 
   /**
@@ -109,8 +182,64 @@ public final class MainActivity extends Activity {
       return;
     }
 
+    // Start with all summaries from the server
+    List<Summary> displayedSummaries = summaries;
+
+    // Apply today filter if the today button is checked
+    if (isTodayChecked) {
+      // Get the current time using the time provider (not Instant.now() directly)
+      Instant currentTime = Helpers.getTimeProvider().now();
+
+      // Convert to America/Chicago timezone to get today's date
+      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+
+      // Calculate start of today (midnight) in America/Chicago timezone
+      ZonedDateTime startOfToday =
+          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+      Instant todayStart = startOfToday.toInstant();
+
+      // Calculate end of today (one nanosecond before midnight tomorrow)
+      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
+      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
+
+      // Use Summary.filterTime to get only today's events
+      displayedSummaries = Summary.filterTime(displayedSummaries, todayStart, todayEnd);
+    }
+
+    // Apply virtual filter if the virtual button is checked
+    if (isVirtualChecked) {
+      // Use Summary.filterVirtual to get only virtual/online events
+      displayedSummaries = Summary.filterVirtual(displayedSummaries, true);
+    }
+
+    // Apply search filter if there is a search query
+    displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
+
     // Tell the adapter about the new data, which triggers the RecyclerView to refresh
     // This runs even if the list is empty, so the adapter knows there are no events to display
-    listAdapter.setSummaries(summaries);
+    listAdapter.setSummaries(displayedSummaries);
+  }
+
+  /**
+   * Called when the user submits a search query. This happens when they press enter/search on the
+   * keyboard.
+   */
+  @Override
+  public boolean onQueryTextSubmit(String query) {
+    // Update the search query and refresh the displayed events
+    currentSearchQuery = query;
+    updateDisplayedSummaries();
+    return true;
+  }
+
+  /**
+   * Called when the search query text changes. This happens as the user types in the search box.
+   */
+  @Override
+  public boolean onQueryTextChange(String newText) {
+    // Update the search query and refresh the displayed events in real-time
+    currentSearchQuery = newText;
+    updateDisplayedSummaries();
+    return true;
   }
 }
