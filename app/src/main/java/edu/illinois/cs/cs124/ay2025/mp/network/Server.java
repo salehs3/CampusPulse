@@ -8,6 +8,7 @@ import androidx.annotation.NonNull;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
+import edu.illinois.cs.cs124.ay2025.mp.models.Event;
 import edu.illinois.cs.cs124.ay2025.mp.models.EventData;
 import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import java.io.IOException;
@@ -33,6 +34,7 @@ import okhttp3.mockwebserver.RecordedRequest;
 public final class Server extends Dispatcher {
   private static final Logger LOGGER = Logger.getLogger(Server.class.getName());
   private final List<Summary> summaries = new ArrayList<>();
+  private final List<EventData> events = new ArrayList<>();
 
   private MockResponse makeOKJSONResponse(@NonNull String body) {
     return new MockResponse()
@@ -72,6 +74,30 @@ public final class Server extends Dispatcher {
     return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(filteredSummaries));
   }
 
+  private MockResponse getEvent(@NonNull String eventId) throws JsonProcessingException {
+    // Loop through the events list to find the event with the matching ID
+    for (EventData eventData : events) {
+      if (eventData.id().equals(eventId)) {
+        // Convert EventData to Event and return it
+        Event event =
+            new Event(
+                eventData.id(),
+                eventData.seriesId(),
+                eventData.title(),
+                eventData.start(),
+                eventData.location(),
+                eventData.description(),
+                eventData.categories(),
+                eventData.source(),
+                eventData.url(),
+                eventData.virtual());
+        return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(event));
+      }
+    }
+    // If no event found with that ID, return 404
+    return HTTP_NOT_FOUND;
+  }
+
   @NonNull
   @Override
   public MockResponse dispatch(@NonNull RecordedRequest request) {
@@ -89,6 +115,13 @@ public final class Server extends Dispatcher {
         return makeOKJSONResponse("200: OK");
       } else if (path.equals("/summary") && method.equals("GET")) {
         return getSummaries();
+      } else if (path.startsWith("/event/") && method.equals("GET")) {
+        // Extract the event ID from the path
+        String eventId = path.substring("/event/".length());
+        if (eventId.isEmpty()) {
+          return HTTP_NOT_FOUND;
+        }
+        return getEvent(eventId);
       } else {
         return HTTP_NOT_FOUND;
       }
@@ -109,6 +142,7 @@ public final class Server extends Dispatcher {
         EventData eventData = OBJECT_MAPPER.readValue(node.toString(), EventData.class);
         Summary summary = new Summary(eventData);
         summaries.add(summary);
+        events.add(eventData);
       }
     } catch (JsonProcessingException e) {
       LOGGER.log(Level.SEVERE, "Loading data failed", e);

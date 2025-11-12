@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.fasterxml.jackson.core.type.TypeReference;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
 import edu.illinois.cs.cs124.ay2025.mp.helpers.ResultMightThrow;
+import edu.illinois.cs.cs124.ay2025.mp.models.Event;
 import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import java.io.IOException;
 import java.util.List;
@@ -73,6 +74,55 @@ public final class Client {
 
               // Success! Call the callback with the list of summaries
               callback.accept(new ResultMightThrow<>(summaries));
+            }
+          } catch (IOException e) {
+            // If anything goes wrong (network error, parsing error, etc.), call callback with error
+            callback.accept(new ResultMightThrow<>(e));
+          }
+        });
+  }
+
+  /**
+   * Fetches a single event by its ID from the server asynchronously.
+   *
+   * <p>This method runs the network request on a background thread (using the executor) so it
+   * doesn't freeze the UI. When the request completes, it calls the callback with the result.
+   *
+   * @param eventId The ID of the event to fetch
+   * @param callback A function that gets called when the request finishes. It receives either the
+   *     Event object (on success) or an error (on failure) wrapped in ResultMightThrow.
+   */
+  public void getEvent(@NonNull final String eventId, @NonNull final Consumer<ResultMightThrow<Event>> callback) {
+    // Execute this code on a background thread (not the main UI thread)
+    executor.execute(
+        () -> {
+          try {
+            // Build the HTTP GET request to the /event/{id} endpoint
+            Request request =
+                new Request.Builder()
+                    .url(EventableApplication.SERVER_URL + "/event/" + eventId)
+                    .get()
+                    .build();
+
+            // Execute the request and get the response (try-with-resources auto-closes response)
+            try (Response response = httpClient.newCall(request).execute()) {
+              // Check if the request was successful (HTTP 200)
+              if (!response.isSuccessful()) {
+                // If not successful, call the callback with an error
+                callback.accept(
+                    new ResultMightThrow<>(
+                        new IOException("Unexpected response code: " + response.code())));
+                return;
+              }
+
+              // Get the response body as a string (JSON data)
+              String responseBody = response.body().string();
+
+              // Convert the JSON string into an Event object using Jackson
+              Event event = OBJECT_MAPPER.readValue(responseBody, Event.class);
+
+              // Success! Call the callback with the event
+              callback.accept(new ResultMightThrow<>(event));
             }
           } catch (IOException e) {
             // If anything goes wrong (network error, parsing error, etc.), call callback with error

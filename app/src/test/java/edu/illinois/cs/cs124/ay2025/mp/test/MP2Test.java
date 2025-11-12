@@ -34,6 +34,7 @@ import edu.illinois.cs.cs124.ay2025.mp.R;
 import edu.illinois.cs.cs124.ay2025.mp.activities.EventActivity;
 import edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers;
 import edu.illinois.cs.cs124.ay2025.mp.models.Event;
+import edu.illinois.cs.cs124.ay2025.mp.models.EventData;
 import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import edu.illinois.cs.cs124.ay2025.mp.network.Client;
 import edu.illinois.cs.cs124.ay2025.mp.network.Server;
@@ -114,7 +115,67 @@ public final class MP2Test {
     for (Summary eventSummary : trimmedSummaries) {
       Event event = testServerGet("/event/" + eventSummary.getId(), Event.class);
 
-      // Add your tests here
+      // Test that the event is not null
+      assertThat(event).isNotNull();
+
+      // Test that the event ID matches the summary ID
+      assertThat(event.getId()).isEqualTo(eventSummary.getId());
+
+      // Test that the event title matches the summary title
+      assertThat(event.getTitle()).isEqualTo(eventSummary.getTitle());
+
+      // Test that the event start time matches the summary start time
+      assertThat(event.getStart()).isEqualTo(eventSummary.getStart());
+
+      // Test that the event location matches the summary location
+      assertThat(event.getLocation()).isEqualTo(eventSummary.getLocation());
+
+      // Test that the virtual field matches
+      assertThat(event.isVirtual()).isEqualTo(eventSummary.getVirtual());
+
+      // Test that all required fields are not null (some may be empty strings)
+      assertThat(event.getId()).isNotNull();
+      assertThat(event.getSeriesId()).isNotNull();
+      assertThat(event.getTitle()).isNotNull();
+      assertThat(event.getStart()).isNotNull();
+      assertThat(event.getLocation()).isNotNull();
+      assertThat(event.getDescription()).isNotNull();
+      assertThat(event.getSource()).isNotNull();
+      assertThat(event.getUrl()).isNotNull();
+
+      // Test that key identifier fields are not empty
+      assertThat(event.getId()).isNotEmpty();
+      assertThat(event.getTitle()).isNotEmpty();
+
+      // Test that categories list is not null (may be empty)
+      assertThat(event.getCategories()).isNotNull();
+
+      // Find the corresponding EventData to verify all fields match
+      EventData matchingEventData = null;
+      for (EventData eventData : EVENT_DATA) {
+        if (eventData.id().equals(eventSummary.getId())) {
+          matchingEventData = eventData;
+          break;
+        }
+      }
+      assertThat(matchingEventData).isNotNull();
+
+      // Verify all fields from EventData match the returned Event
+      assertThat(event.getId()).isEqualTo(matchingEventData.id());
+      assertThat(event.getSeriesId()).isEqualTo(matchingEventData.seriesId());
+      assertThat(event.getTitle()).isEqualTo(matchingEventData.title());
+      assertThat(event.getStart()).isEqualTo(matchingEventData.start());
+      assertThat(event.getLocation()).isEqualTo(matchingEventData.location());
+      assertThat(event.getDescription()).isEqualTo(matchingEventData.description());
+      assertThat(event.getSource()).isEqualTo(matchingEventData.source());
+      assertThat(event.getUrl()).isEqualTo(matchingEventData.url());
+      assertThat(event.isVirtual()).isEqualTo(matchingEventData.virtual());
+
+      // Verify categories arrays match
+      assertThat(event.getCategories().size()).isEqualTo(matchingEventData.categories().length);
+      for (int i = 0; i < matchingEventData.categories().length; i++) {
+        assertThat(event.getCategories().get(i)).isEqualTo(matchingEventData.categories()[i]);
+      }
     }
 
     testServerGet("/events/61801f5ee9ce3704", HttpURLConnection.HTTP_NOT_FOUND);
