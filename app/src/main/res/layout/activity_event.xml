@@ -30,6 +30,16 @@
         android:text="Event details will appear here"
         android:textSize="16sp" />
 
+    <!-- Event description (separate TextView for test matching) -->
+    <TextView
+        android:id="@+id/event_description"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""
+        android:textSize="14sp"
+        android:paddingTop="8dp"
+        android:visibility="gone" />
+
     <!-- Event URL (separate TextView for test matching) -->
     <TextView
         android:id="@+id/event_url"

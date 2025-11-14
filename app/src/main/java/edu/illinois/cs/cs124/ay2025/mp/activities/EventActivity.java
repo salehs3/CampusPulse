@@ -104,12 +104,13 @@ public final class EventActivity extends Activity {
     // Find the UI elements from the layout
     TextView eventTitleView = findViewById(R.id.event_title);
     TextView eventDetailsView = findViewById(R.id.event_details);
+    TextView eventDescriptionView = findViewById(R.id.event_description);
     TextView eventUrlView = findViewById(R.id.event_url);
 
     // Set the event title
     eventTitleView.setText(event.getTitle());
 
-    // Build the details string with all event information (except URL)
+    // Build the details string (without description and URL which have separate TextViews)
     StringBuilder detailsBuilder = new StringBuilder();
 
     // Add formatted start time (e.g., "Oct 15 • 3:30 PM")
@@ -126,11 +127,6 @@ public final class EventActivity extends Activity {
     // Add location if available
     if (!event.getLocation().isBlank()) {
       detailsBuilder.append("Location: ").append(event.getLocation()).append("\n\n");
-    }
-
-    // Add description if available
-    if (!event.getDescription().isBlank()) {
-      detailsBuilder.append(event.getDescription()).append("\n\n");
     }
 
     // Add virtual indicator if event is virtual
@@ -152,6 +148,13 @@ public final class EventActivity extends Activity {
 
     // Set the details text
     eventDetailsView.setText(detailsBuilder.toString().trim());
+
+    // Set the description in a separate TextView for test matching
+    // The test expects to find the description as exact text in its own TextView
+    if (!event.getDescription().isBlank()) {
+      eventDescriptionView.setText(event.getDescription());
+      eventDescriptionView.setVisibility(android.view.View.VISIBLE);
+    }
 
     // Set the URL in a separate TextView for test matching
     // The test expects to find the URL as exact text in its own TextView
