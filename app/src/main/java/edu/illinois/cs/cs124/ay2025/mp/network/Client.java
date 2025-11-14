@@ -92,7 +92,8 @@ public final class Client {
    * @param callback A function that gets called when the request finishes. It receives either the
    *     Event object (on success) or an error (on failure) wrapped in ResultMightThrow.
    */
-  public void getEvent(@NonNull final String eventId, @NonNull final Consumer<ResultMightThrow<Event>> callback) {
+  public void getEvent(
+      @NonNull final String eventId, @NonNull final Consumer<ResultMightThrow<Event>> callback) {
     // Execute this code on a background thread (not the main UI thread)
     executor.execute(
         () -> {

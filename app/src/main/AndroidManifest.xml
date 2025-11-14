@@ -37,5 +37,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- EventActivity displays detailed information about a single event -->
+        <activity
+            android:name=".activities.EventActivity"
+            android:exported="false" />
     </application>
 </manifest>

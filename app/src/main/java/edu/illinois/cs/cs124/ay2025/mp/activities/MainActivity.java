@@ -1,6 +1,7 @@
 package edu.illinois.cs.cs124.ay2025.mp.activities;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.graphics.Insets;
 import android.os.Bundle;
 import android.util.Log;
@@ -61,7 +62,19 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     setTitle("Discover Events");
 
     // Create the adapter (starts with empty list, will update later when data loads)
-    listAdapter = new SummaryListAdapter(summaries, this);
+    // Pass a click callback that launches EventActivity when a summary is clicked
+    listAdapter =
+        new SummaryListAdapter(
+            summaries,
+            this,
+            (clickedSummary) -> {
+              // Create an intent to launch EventActivity
+              Intent eventIntent = new Intent(this, EventActivity.class);
+              // Add the event ID as an extra so EventActivity knows which event to load
+              eventIntent.putExtra("id", clickedSummary.getId());
+              // Start the EventActivity
+              startActivity(eventIntent);
+            });
 
     // Find the RecyclerView (scrollable list) from the layout and configure it
     RecyclerView recyclerView = findViewById(R.id.recycler_view);
