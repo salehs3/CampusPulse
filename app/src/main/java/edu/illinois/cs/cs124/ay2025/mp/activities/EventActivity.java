@@ -149,9 +149,9 @@ public final class EventActivity extends Activity {
       detailsBuilder.append("Source: ").append(event.getSource()).append("\n\n");
     }
 
-    // Add URL if available
+    // Add URL if available (without label to match test expectations)
     if (!event.getUrl().isBlank()) {
-      detailsBuilder.append("URL: ").append(event.getUrl());
+      detailsBuilder.append(event.getUrl());
     }
 
     // Set the details text
