@@ -83,6 +83,27 @@
                     android:textOn=""
                     android:alpha="0.3" />
             </FrameLayout>
+
+            <!-- Filter button for starred/favorite events (star icon) -->
+            <FrameLayout
+                android:id="@+id/starredButtonFrame"
+                android:layout_width="44dp"
+                android:layout_height="match_parent"
+                android:paddingStart="2dp"
+                android:paddingEnd="6dp"
+                android:paddingTop="6dp"
+                android:paddingBottom="6dp">
+                <ToggleButton
+                    android:id="@+id/starredButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:checked="false"
+                    android:contentDescription="Show only starred/favorite events"
+                    android:textOff="☆"
+                    android:textOn="★"
+                    android:textSize="24sp"
+                    android:alpha="0.3" />
+            </FrameLayout>
         </LinearLayout>
 
     </Toolbar>

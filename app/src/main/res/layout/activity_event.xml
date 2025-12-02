@@ -12,15 +12,34 @@
     android:padding="16dp"
     tools:ignore="HardcodedText">
 
-    <!-- Event title placeholder -->
-    <TextView
-        android:id="@+id/event_title"
+    <!-- Event title and favorite button container -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Event Title"
-        android:textSize="24sp"
-        android:textStyle="bold"
-        android:paddingBottom="8dp" />
+        android:orientation="horizontal"
+        android:paddingBottom="8dp">
+
+        <!-- Event title placeholder -->
+        <TextView
+            android:id="@+id/event_title"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Event Title"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <!-- Favorite toggle button -->
+        <ToggleButton
+            android:id="@+id/favoriteButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:checked="false"
+            android:contentDescription="Mark event as favorite"
+            android:textOff="☆"
+            android:textOn="★"
+            android:textSize="24sp" />
+    </LinearLayout>
 
     <!-- Event details placeholder -->
     <TextView

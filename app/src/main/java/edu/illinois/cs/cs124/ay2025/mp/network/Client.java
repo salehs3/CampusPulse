@@ -8,6 +8,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
 import edu.illinois.cs.cs124.ay2025.mp.helpers.ResultMightThrow;
 import edu.illinois.cs.cs124.ay2025.mp.models.Event;
+import edu.illinois.cs.cs124.ay2025.mp.models.Favorite;
 import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import java.io.IOException;
 import java.util.List;
@@ -18,6 +19,7 @@ import java.util.function.Consumer;
 import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 
 /**
@@ -124,6 +126,114 @@ public final class Client {
 
               // Success! Call the callback with the event
               callback.accept(new ResultMightThrow<>(event));
+            }
+          } catch (IOException e) {
+            // If anything goes wrong (network error, parsing error, etc.), call callback with error
+            callback.accept(new ResultMightThrow<>(e));
+          }
+        });
+  }
+
+  /**
+   * Fetches the favorite status for a specific event by its ID from the server asynchronously.
+   *
+   * <p>This method runs the network request on a background thread (using the executor) so it
+   * doesn't freeze the UI. When the request completes, it calls the callback with the result.
+   *
+   * @param eventId The ID of the event to get favorite status for
+   * @param callback A function that gets called when the request finishes. It receives either the
+   *     favorite status (true/false) (on success) or an error (on failure) wrapped in
+   *     ResultMightThrow.
+   */
+  public void getFavorite(
+      @NonNull final String eventId, @NonNull final Consumer<ResultMightThrow<Boolean>> callback) {
+    // Execute this code on a background thread (not the main UI thread)
+    executor.execute(
+        () -> {
+          try {
+            // Build the HTTP GET request to the /favorite/{id} endpoint
+            Request request =
+                new Request.Builder()
+                    .url(EventableApplication.SERVER_URL + "/favorite/" + eventId)
+                    .get()
+                    .build();
+
+            // Execute the request and get the response (try-with-resources auto-closes response)
+            try (Response response = httpClient.newCall(request).execute()) {
+              // Check if the request was successful (HTTP 200)
+              if (!response.isSuccessful()) {
+                // If not successful, call the callback with an error
+                callback.accept(
+                    new ResultMightThrow<>(
+                        new IOException("Unexpected response code: " + response.code())));
+                return;
+              }
+
+              // Get the response body as a string (JSON data)
+              String responseBody = response.body().string();
+
+              // Convert the JSON string into a Favorite object using Jackson
+              Favorite favorite = OBJECT_MAPPER.readValue(responseBody, Favorite.class);
+
+              // Success! Call the callback with the favorite status
+              callback.accept(new ResultMightThrow<>(favorite.getFavorite()));
+            }
+          } catch (IOException e) {
+            // If anything goes wrong (network error, parsing error, etc.), call callback with error
+            callback.accept(new ResultMightThrow<>(e));
+          }
+        });
+  }
+
+  /**
+   * Sets the favorite status for a specific event by its ID on the server asynchronously.
+   *
+   * <p>This method runs the network request on a background thread (using the executor) so it
+   * doesn't freeze the UI. When the request completes, it calls the callback with the result.
+   *
+   * @param eventId The ID of the event to set favorite status for
+   * @param isFavorite Whether the event should be marked as favorite (true) or not (false)
+   * @param callback A function that gets called when the request finishes. It receives either the
+   *     favorite status that was set (true/false) (on success) or an error (on failure) wrapped in
+   *     ResultMightThrow.
+   */
+  public void setFavorite(
+      @NonNull final String eventId,
+      final boolean isFavorite,
+      @NonNull final Consumer<ResultMightThrow<Boolean>> callback) {
+    // Execute this code on a background thread (not the main UI thread)
+    executor.execute(
+        () -> {
+          try {
+            // Create a Favorite object with the event ID and favorite status
+            Favorite favorite = new Favorite(eventId, isFavorite);
+
+            // Convert the Favorite object to JSON string
+            String jsonBody = OBJECT_MAPPER.writeValueAsString(favorite);
+
+            // Create the request body
+            RequestBody requestBody = RequestBody.create(jsonBody, JSON);
+
+            // Build the HTTP POST request to the /favorite endpoint
+            Request request =
+                new Request.Builder()
+                    .url(EventableApplication.SERVER_URL + "/favorite/")
+                    .post(requestBody)
+                    .build();
+
+            // Execute the request and get the response (try-with-resources auto-closes response)
+            try (Response response = httpClient.newCall(request).execute()) {
+              // Check if the request was successful (HTTP 302 redirect or 200)
+              if (!response.isSuccessful() && response.code() != 302) {
+                // If not successful, call the callback with an error
+                callback.accept(
+                    new ResultMightThrow<>(
+                        new IOException("Unexpected response code: " + response.code())));
+                return;
+              }
+
+              // Success! Call the callback with the favorite status that was set
+              callback.accept(new ResultMightThrow<>(isFavorite));
             }
           } catch (IOException e) {
             // If anything goes wrong (network error, parsing error, etc.), call callback with error

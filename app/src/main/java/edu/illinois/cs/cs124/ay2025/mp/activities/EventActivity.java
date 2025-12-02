@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 import androidx.annotation.Nullable;
 import edu.illinois.cs.cs124.ay2025.mp.R;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
@@ -50,6 +51,36 @@ public final class EventActivity extends Activity {
       Log.e(TAG, "No event ID provided in intent");
       return;
     }
+
+    // Set up the favorite button click handler
+    ToggleButton favoriteButton = findViewById(R.id.favoriteButton);
+    favoriteButton.setOnClickListener(
+        (view) -> {
+          // Get the new checked state
+          boolean isChecked = favoriteButton.isChecked();
+
+          // Save the favorite status to the server
+          EventableApplication application = (EventableApplication) getApplication();
+          application
+              .getClient()
+              .setFavorite(
+                  eventId,
+                  isChecked,
+                  (result) -> {
+                    // This callback runs when the server responds (on a background thread)
+                    try {
+                      // Extract the favorite status that was set
+                      boolean favoriteStatus = result.getValue();
+
+                      // Log for debugging
+                      Log.d(TAG, "Favorite status set to: " + favoriteStatus);
+                    } catch (Exception e) {
+                      // If something goes wrong, log the error and revert the button state
+                      Log.e(TAG, "Error setting favorite status", e);
+                      runOnUiThread(() -> favoriteButton.setChecked(!isChecked));
+                    }
+                  });
+        });
   }
 
   /**
@@ -92,6 +123,45 @@ public final class EventActivity extends Activity {
                 Log.e(TAG, "Error loading event", e);
               }
             });
+
+    // Also load the favorite status for this event
+    loadFavoriteStatus();
+  }
+
+  /** Fetches the favorite status for the current event from the server asynchronously. */
+  private void loadFavoriteStatus() {
+    // Don't try to load if we don't have an event ID
+    if (eventId == null) {
+      return;
+    }
+
+    // Get the application object (created at app startup) which has the HTTP client
+    EventableApplication application = (EventableApplication) getApplication();
+
+    // Make an async request to get the favorite status from the server
+    application
+        .getClient()
+        .getFavorite(
+            eventId,
+            (result) -> {
+              // This callback runs when the server responds (on a background thread)
+              try {
+                // Extract the favorite status from the result
+                boolean isFavorite = result.getValue();
+
+                // Switch back to the main UI thread to update the favorite button
+                runOnUiThread(() -> updateFavoriteButton(isFavorite));
+              } catch (Exception e) {
+                // If something goes wrong, log the error for debugging
+                Log.e(TAG, "Error loading favorite status", e);
+              }
+            });
+  }
+
+  /** Updates the favorite button state. This must be called on the main UI thread. */
+  private void updateFavoriteButton(boolean isFavorite) {
+    ToggleButton favoriteButton = findViewById(R.id.favoriteButton);
+    favoriteButton.setChecked(isFavorite);
   }
 
   /** Updates the UI to display the event details. This must be called on the main UI thread. */
