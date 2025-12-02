@@ -323,7 +323,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                       orderedStarredSummaries.add(originalSummary);
                     }
                   }
-                  runOnUiThread(() -> listAdapter.setSummaries(orderedStarredSummaries));
+                  // Update the adapter on the UI thread
+                  runOnUiThread(
+                      () -> {
+                        listAdapter.setSummaries(orderedStarredSummaries);
+                        Log.d(
+                            TAG,
+                            "Starred filter applied: "
+                                + orderedStarredSummaries.size()
+                                + " starred events");
+                      });
                 }
               });
     }
