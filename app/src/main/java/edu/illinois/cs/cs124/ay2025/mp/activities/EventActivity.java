@@ -52,13 +52,10 @@ public final class EventActivity extends Activity {
       return;
     }
 
-    // Set up the favorite button click handler
+    // Set up the favorite button checked change handler
     ToggleButton favoriteButton = findViewById(R.id.favoriteButton);
-    favoriteButton.setOnClickListener(
-        (view) -> {
-          // Get the new checked state
-          boolean isChecked = favoriteButton.isChecked();
-
+    favoriteButton.setOnCheckedChangeListener(
+        (button, isChecked) -> {
           // Save the favorite status to the server
           EventableApplication application = (EventableApplication) getApplication();
           application
@@ -77,7 +74,7 @@ public final class EventActivity extends Activity {
                     } catch (Exception e) {
                       // If something goes wrong, log the error and revert the button state
                       Log.e(TAG, "Error setting favorite status", e);
-                      runOnUiThread(() -> favoriteButton.setChecked(!isChecked));
+                      runOnUiThread(() -> button.setChecked(!isChecked));
                     }
                   });
         });
@@ -161,7 +158,34 @@ public final class EventActivity extends Activity {
   /** Updates the favorite button state. This must be called on the main UI thread. */
   private void updateFavoriteButton(boolean isFavorite) {
     ToggleButton favoriteButton = findViewById(R.id.favoriteButton);
+    // Temporarily remove the listener to avoid triggering setFavorite when loading initial state
+    favoriteButton.setOnCheckedChangeListener(null);
     favoriteButton.setChecked(isFavorite);
+    // Re-attach the listener
+    favoriteButton.setOnCheckedChangeListener(
+        (button, isChecked) -> {
+          // Save the favorite status to the server
+          EventableApplication application = (EventableApplication) getApplication();
+          application
+              .getClient()
+              .setFavorite(
+                  eventId,
+                  isChecked,
+                  (result) -> {
+                    // This callback runs when the server responds (on a background thread)
+                    try {
+                      // Extract the favorite status that was set
+                      boolean favoriteStatus = result.getValue();
+
+                      // Log for debugging
+                      Log.d(TAG, "Favorite status set to: " + favoriteStatus);
+                    } catch (Exception e) {
+                      // If something goes wrong, log the error and revert the button state
+                      Log.e(TAG, "Error setting favorite status", e);
+                      runOnUiThread(() -> button.setChecked(!isChecked));
+                    }
+                  });
+        });
   }
 
   /** Updates the UI to display the event details. This must be called on the main UI thread. */

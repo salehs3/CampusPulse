@@ -35,6 +35,9 @@ public final class Client {
   // Specifies that we're sending/receiving JSON data
   private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
 
+  // HTTP status code for temporary redirect
+  private static final int HTTP_REDIRECT = 302;
+
   /**
    * Fetches the list of event summaries from the server asynchronously.
    *
@@ -224,7 +227,7 @@ public final class Client {
             // Execute the request and get the response (try-with-resources auto-closes response)
             try (Response response = httpClient.newCall(request).execute()) {
               // Check if the request was successful (HTTP 302 redirect or 200)
-              if (!response.isSuccessful() && response.code() != 302) {
+              if (!response.isSuccessful() && response.code() != HTTP_REDIRECT) {
                 // If not successful, call the callback with an error
                 callback.accept(
                     new ResultMightThrow<>(
