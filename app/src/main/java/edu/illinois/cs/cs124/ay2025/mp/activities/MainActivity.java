@@ -366,13 +366,10 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Apply starred filter if the starred button is checked
     if (isStarredChecked) {
-      // Get the application to access the shared favorite cache
-      EventableApplication application = (EventableApplication) getApplication();
-
-      // Filter to show only events that are marked as favorites in the cache
+      // Filter to show only events that are marked as favorites
       List<Summary> starredSummaries = new ArrayList<>();
       for (Summary summary : displayedSummaries) {
-        if (application.isFavoriteCached(summary.getId())) {
+        if (summary.isFavorite()) {
           starredSummaries.add(summary);
         }
       }
