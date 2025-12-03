@@ -204,9 +204,6 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
-                // Load favorites for the summaries we received
-                loadFavoritesForCurrentSummaries();
-
                 // Update the UI on the main thread
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
@@ -216,37 +213,6 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             });
   }
 
-  /**
-   * Loads all favorite event IDs from the server using a single batch request. This is much more
-   * efficient than loading favorites one by one.
-   */
-  private void loadFavoritesForCurrentSummaries() {
-    EventableApplication application = (EventableApplication) getApplication();
-
-    // Use the batch endpoint to get all favorite IDs in one request
-    application
-        .getClient()
-        .getAllFavorites(
-            (result) -> {
-              try {
-                List<String> favoriteEventIds = result.getValue();
-
-                // Clear existing cache and populate with favorites from server
-                application.getFavoriteEventIds().clear();
-                for (String eventId : favoriteEventIds) {
-                  application.updateFavoriteCache(eventId, true);
-                }
-
-                // If starred filter is active, refresh display now that favorites are loaded
-                if (isStarredChecked) {
-                  runOnUiThread(this::updateDisplayedSummaries);
-                }
-              } catch (Exception e) {
-                // If favorites can't be loaded, log error and continue
-                Log.e(TAG, "Error loading all favorites", e);
-              }
-            });
-  }
 
   /**
    * Updates the RecyclerView to display the summaries we fetched from the server. This must be

@@ -83,17 +83,6 @@ public final class Server extends Dispatcher {
     return HTTP_NOT_FOUND;
   }
 
-  private MockResponse getAllFavorites() throws JsonProcessingException {
-    // Return a list of all event IDs that are marked as favorites
-    List<String> favoriteEventIds = new ArrayList<>();
-    for (Map.Entry<String, Boolean> entry : favorites.entrySet()) {
-      if (entry.getValue()) {
-        favoriteEventIds.add(entry.getKey());
-      }
-    }
-    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(favoriteEventIds));
-  }
-
   private MockResponse getFavorite(@NonNull String eventId) throws JsonProcessingException {
     // Check if the event exists in our events list
     boolean eventExists = false;
@@ -187,8 +176,6 @@ public final class Server extends Dispatcher {
         return getEvent(eventId);
       } else if (path.equals("/favorite") && method.equals("POST")) {
         return setFavorite(request);
-      } else if (path.equals("/favorite") && method.equals("GET")) {
-        return getAllFavorites();
       } else if (path.startsWith("/favorite/") && method.equals("GET")) {
         // Extract the event ID from the path
         String eventId = path.substring("/favorite/".length());

@@ -138,59 +138,6 @@ public final class Client {
   }
 
   /**
-   * Fetches all favorite event IDs from the server asynchronously.
-   *
-   * <p>This method runs the network request on a background thread so it doesn't freeze the UI.
-   * When the request completes, it calls the callback with the list of favorite event IDs.
-   *
-   * @param callback A function that gets called when the request finishes. It receives either a
-   *     list of favorite event IDs (on success) or an error (on failure) wrapped in
-   *     ResultMightThrow.
-   */
-  public void getAllFavorites(@NonNull final Consumer<ResultMightThrow<List<String>>> callback) {
-    // Execute this code on a background thread
-    executor.execute(
-        () -> {
-          try {
-            // Build the HTTP GET request to the /favorite endpoint
-            Request request =
-                new Request.Builder()
-                    .url(EventableApplication.SERVER_URL + "/favorite")
-                    .get()
-                    .build();
-
-            // Execute the request and get the response
-            try (Response response = httpClient.newCall(request).execute()) {
-              // Check if the request was successful
-              if (!response.isSuccessful()) {
-                callback.accept(
-                    new ResultMightThrow<>(
-                        new IOException("Unexpected response code: " + response.code())));
-                return;
-              }
-
-              // Get the response body as a string (JSON array of event IDs)
-              String responseBody = response.body().string();
-
-              // Convert the JSON array into a List of Strings
-              List<String> favoriteIds =
-                  OBJECT_MAPPER.readValue(
-                      responseBody,
-                      OBJECT_MAPPER
-                          .getTypeFactory()
-                          .constructCollectionType(List.class, String.class));
-
-              // Call the callback with the successful result
-              callback.accept(new ResultMightThrow<>(favoriteIds));
-            }
-          } catch (IOException e) {
-            // If anything goes wrong, call callback with error
-            callback.accept(new ResultMightThrow<>(e));
-          }
-        });
-  }
-
-  /**
    * Fetches the favorite status for a specific event by its ID from the server asynchronously.
    *
    * <p>This method runs the network request on a background thread (using the executor) so it
