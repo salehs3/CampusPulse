@@ -22,7 +22,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
@@ -230,36 +229,32 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // This ensures the starred filter works even if favorites were set via API
                 EventableApplication app = (EventableApplication) getApplication();
 
-                // Create CompletableFuture for each favorite load
-                CompletableFuture<?>[] futures =
-                    summaries.stream()
-                        .map(
-                            summary -> {
-                              CompletableFuture<Boolean> future = new CompletableFuture<>();
-                              String eventId = summary.getId();
+                // Create atomic counter to track completion of all favorite loads
+                java.util.concurrent.atomic.AtomicInteger pendingLoads =
+                    new java.util.concurrent.atomic.AtomicInteger(summaries.size());
 
-                              // Start async getFavorite request
-                              app.getClient()
-                                  .getFavorite(
-                                      eventId,
-                                      (favResult) -> {
-                                        try {
-                                          boolean isFav = favResult.getValue();
-                                          app.updateFavoriteCache(eventId, isFav);
-                                          future.complete(isFav);
-                                        } catch (Exception ex) {
-                                          Log.d(TAG, "Could not load favorite for " + eventId);
-                                          future.complete(false);
-                                        }
-                                      });
+                // Load favorite status for each summary
+                for (Summary summary : summaries) {
+                  String eventId = summary.getId();
 
-                              return future;
-                            })
-                        .toArray(CompletableFuture[]::new);
-
-                // Wait for ALL favorites to load, then update UI on main thread
-                CompletableFuture.allOf(futures)
-                    .thenRun(() -> runOnUiThread(this::updateDisplayedSummaries));
+                  app.getClient()
+                      .getFavorite(
+                          eventId,
+                          (favResult) -> {
+                            try {
+                              boolean isFav = favResult.getValue();
+                              app.updateFavoriteCache(eventId, isFav);
+                            } catch (Exception ex) {
+                              Log.d(TAG, "Could not load favorite for " + eventId);
+                            } finally {
+                              // Decrement counter and update UI when all complete
+                              if (pendingLoads.decrementAndGet() == 0) {
+                                // All favorites loaded, now update UI on main thread
+                                runOnUiThread(this::updateDisplayedSummaries);
+                              }
+                            }
+                          });
+                }
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
                 Log.e(TAG, "Error updating summary list", e);
@@ -273,7 +268,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private void applyStarredFilter() {
     if (isStarredChecked) {
       // Load favorites for current summaries first, then update display
-      loadFavoritesForCurrentSummaries();
+      loadFavoritesThenFilter();
     } else {
       // Show all if filter is off
       updateDisplayedSummaries();
@@ -281,10 +276,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Loads favorite status for all current summaries from the server. This is called when the
-   * starred filter is turned ON to ensure we have the favorite data needed for filtering.
+   * Loads favorite status for all current summaries from the server, then applies the filter. This
+   * is called when the starred filter is turned ON to ensure we have the favorite data needed for
+   * filtering.
    */
-  private void loadFavoritesForCurrentSummaries() {
+  private void loadFavoritesThenFilter() {
     if (summaries == null || summaries.isEmpty()) {
       updateDisplayedSummaries();
       return;
@@ -293,39 +289,35 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Get the application to access the client and cache
     EventableApplication application = (EventableApplication) getApplication();
 
-    // Create CompletableFuture for each favorite load
-    CompletableFuture<?>[] futures =
-        summaries.stream()
-            .map(
-                summary -> {
-                  CompletableFuture<Boolean> future = new CompletableFuture<>();
-                  String eventId = summary.getId();
+    // Create array to track completion of all favorite loads
+    java.util.concurrent.atomic.AtomicInteger pendingLoads =
+        new java.util.concurrent.atomic.AtomicInteger(summaries.size());
 
-                  // Start async getFavorite request
-                  application
-                      .getClient()
-                      .getFavorite(
-                          eventId,
-                          (result) -> {
-                            try {
-                              // Update the cache with the favorite status from the server
-                              boolean isFavorite = result.getValue();
-                              application.updateFavoriteCache(eventId, isFavorite);
-                              future.complete(isFavorite);
-                            } catch (Exception e) {
-                              // If request fails, just log it and complete with false
-                              Log.d(TAG, "Could not load favorite for " + eventId);
-                              future.complete(false);
-                            }
-                          });
+    // Load favorite status for each summary
+    for (Summary summary : summaries) {
+      String eventId = summary.getId();
 
-                  return future;
-                })
-            .toArray(CompletableFuture[]::new);
-
-    // Wait for ALL favorites to load, then update UI on main thread
-    CompletableFuture.allOf(futures)
-        .thenRun(() -> runOnUiThread(this::updateDisplayedSummaries));
+      application
+          .getClient()
+          .getFavorite(
+              eventId,
+              (result) -> {
+                try {
+                  // Update the cache with the favorite status from the server
+                  boolean isFavorite = result.getValue();
+                  application.updateFavoriteCache(eventId, isFavorite);
+                } catch (Exception e) {
+                  // If request fails, just log it
+                  Log.d(TAG, "Could not load favorite for " + eventId);
+                } finally {
+                  // Decrement counter and update UI when all complete
+                  if (pendingLoads.decrementAndGet() == 0) {
+                    // All favorites loaded, now update UI on main thread
+                    runOnUiThread(this::updateDisplayedSummaries);
+                  }
+                }
+              });
+    }
   }
 
   /**
