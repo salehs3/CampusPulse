@@ -217,37 +217,35 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Loads favorite status for the current summaries from the server. This is needed to sync the
-   * cache with server-side favorites that may have been set outside the app.
+   * Loads all favorite event IDs from the server using a single batch request. This is much more
+   * efficient than loading favorites one by one.
    */
   private void loadFavoritesForCurrentSummaries() {
-    if (summaries == null || summaries.isEmpty()) {
-      return;
-    }
-
     EventableApplication application = (EventableApplication) getApplication();
 
-    // Load favorites for all current summaries to sync cache with server
-    for (Summary summary : summaries) {
-      String eventId = summary.getId();
-      application
-          .getClient()
-          .getFavorite(
-              eventId,
-              (result) -> {
-                try {
-                  boolean isFavorite = result.getValue();
-                  application.updateFavoriteCache(eventId, isFavorite);
+    // Use the batch endpoint to get all favorite IDs in one request
+    application
+        .getClient()
+        .getAllFavorites(
+            (result) -> {
+              try {
+                List<String> favoriteEventIds = result.getValue();
 
-                  // If starred filter is active, refresh display when favorites are loaded
-                  if (isStarredChecked) {
-                    runOnUiThread(this::updateDisplayedSummaries);
-                  }
-                } catch (Exception e) {
-                  // Silently ignore errors to avoid spam for thousands of events
+                // Clear existing cache and populate with favorites from server
+                application.getFavoriteEventIds().clear();
+                for (String eventId : favoriteEventIds) {
+                  application.updateFavoriteCache(eventId, true);
                 }
-              });
-    }
+
+                // If starred filter is active, refresh display now that favorites are loaded
+                if (isStarredChecked) {
+                  runOnUiThread(this::updateDisplayedSummaries);
+                }
+              } catch (Exception e) {
+                // If favorites can't be loaded, log error and continue
+                Log.e(TAG, "Error loading all favorites", e);
+              }
+            });
   }
 
   /**

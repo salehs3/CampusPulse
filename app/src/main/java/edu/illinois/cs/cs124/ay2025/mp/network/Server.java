@@ -2,7 +2,6 @@ package edu.illinois.cs.cs124.ay2025.mp.network;
 
 import static edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers.CHECK_SERVER_RESPONSE;
 import static edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers.OBJECT_MAPPER;
-import static edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers.getTimeProvider;
 
 import androidx.annotation.NonNull;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -15,9 +14,6 @@ import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -58,24 +54,9 @@ public final class Server extends Dispatcher {
           .setBody("400: Bad Request");
 
   private MockResponse getSummaries() throws JsonProcessingException {
-    Instant now = getTimeProvider().now();
-    ZonedDateTime nowZoned = now.atZone(ZoneId.of("America/Chicago"));
-    ZonedDateTime startOfToday = nowZoned.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
-
-    List<Summary> filteredSummaries =
-        summaries.stream()
-            .filter(
-                summary -> {
-                  try {
-                    ZonedDateTime eventStart = ZonedDateTime.parse(summary.getStart());
-                    return !eventStart.isBefore(startOfToday);
-                  } catch (Exception e) {
-                    return true;
-                  }
-                })
-            .toList();
-
-    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(filteredSummaries));
+    // Return all summaries without date filtering
+    // MainActivity will handle filtering based on the today button state
+    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(summaries));
   }
 
   private MockResponse getEvent(@NonNull String eventId) throws JsonProcessingException {
@@ -100,6 +81,17 @@ public final class Server extends Dispatcher {
     }
     // If no event found with that ID, return 404
     return HTTP_NOT_FOUND;
+  }
+
+  private MockResponse getAllFavorites() throws JsonProcessingException {
+    // Return a list of all event IDs that are marked as favorites
+    List<String> favoriteEventIds = new ArrayList<>();
+    for (Map.Entry<String, Boolean> entry : favorites.entrySet()) {
+      if (entry.getValue()) {
+        favoriteEventIds.add(entry.getKey());
+      }
+    }
+    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(favoriteEventIds));
   }
 
   private MockResponse getFavorite(@NonNull String eventId) throws JsonProcessingException {
@@ -195,6 +187,8 @@ public final class Server extends Dispatcher {
         return getEvent(eventId);
       } else if (path.equals("/favorite") && method.equals("POST")) {
         return setFavorite(request);
+      } else if (path.equals("/favorite") && method.equals("GET")) {
+        return getAllFavorites();
       } else if (path.startsWith("/favorite/") && method.equals("GET")) {
         // Extract the event ID from the path
         String eventId = path.substring("/favorite/".length());
