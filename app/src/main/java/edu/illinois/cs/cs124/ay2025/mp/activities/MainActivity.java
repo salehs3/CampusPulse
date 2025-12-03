@@ -181,8 +181,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Log the button state for debugging
           Log.d(TAG, "Starred button clicked. Showing starred events: " + isChecked);
 
-          // Update display immediately - favorites already loaded in loadSummaries()
-          updateDisplayedSummaries();
+          // Apply the starred filter
+          applyStarredFilter();
         });
 
     // Load initial data from server
@@ -255,6 +255,60 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 Log.e(TAG, "Error updating summary list", e);
               }
             });
+  }
+
+  /**
+   * Applies the starred filter by loading favorites first if needed, then updating the display.
+   */
+  private void applyStarredFilter() {
+    if (isStarredChecked) {
+      // Load favorites for current summaries first, then update display
+      loadFavoritesForCurrentSummaries();
+    } else {
+      // Show all if filter is off
+      updateDisplayedSummaries();
+    }
+  }
+
+  /**
+   * Loads favorite status for all current summaries from the server. This is called when the
+   * starred filter is turned ON to ensure we have the favorite data needed for filtering.
+   */
+  private void loadFavoritesForCurrentSummaries() {
+    if (summaries == null || summaries.isEmpty()) {
+      updateDisplayedSummaries();
+      return;
+    }
+
+    // Get the application to access the client and cache
+    EventableApplication application = (EventableApplication) getApplication();
+
+    // Track how many getFavorite requests are pending
+    AtomicInteger pendingRequests = new AtomicInteger(summaries.size());
+
+    // Query favorite status for each summary
+    for (Summary summary : summaries) {
+      String eventId = summary.getId();
+      application
+          .getClient()
+          .getFavorite(
+              eventId,
+              (result) -> {
+                try {
+                  // Update the cache with the favorite status from the server
+                  boolean isFavorite = result.getValue();
+                  application.updateFavoriteCache(eventId, isFavorite);
+                } catch (Exception e) {
+                  // If request fails, just log it and continue
+                  Log.d(TAG, "Could not load favorite for " + eventId);
+                } finally {
+                  // When all requests complete, update the display
+                  if (pendingRequests.decrementAndGet() == 0) {
+                    runOnUiThread(this::updateDisplayedSummaries);
+                  }
+                }
+              });
+    }
   }
 
   /**
