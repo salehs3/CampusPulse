@@ -181,7 +181,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             // Then load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // When turned off, just update display immediately
+            // When starred filter is turned off, disable today filter to show all events
+            isTodayChecked = false;
+            ToggleButton todayButton = findViewById(R.id.todayButton);
+            todayButton.setChecked(false);
+            todayButton.setAlpha(BUTTON_ALPHA_INACTIVE);
             updateDisplayedSummaries();
           }
         });
@@ -216,9 +220,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
-                // Update the UI on the main thread
-                // The starred filter will use the cached favorite status
-                runOnUiThread(this::updateDisplayedSummaries);
+                // If starred filter is ON, reload favorites before updating UI
+                if (isStarredChecked) {
+                  runOnUiThread(this::updateDisplayedSummaries);
+                  loadFavoritesForDisplayedSummaries();
+                } else {
+                  // Update the UI on the main thread
+                  runOnUiThread(this::updateDisplayedSummaries);
+                }
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
                 Log.e(TAG, "Error updating summary list", e);
