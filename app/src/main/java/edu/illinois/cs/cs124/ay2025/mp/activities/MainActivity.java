@@ -47,7 +47,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private SummaryListAdapter listAdapter;
 
   // Tracks whether the today filter button is checked (true = show only today's events)
-  private boolean isTodayChecked = false;
+  private boolean isTodayChecked = true;
 
   // Tracks whether the virtual filter button is checked (true = show only virtual/online events)
   private boolean isVirtualChecked = false;
@@ -110,8 +110,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Set up the calendar button (today filter) click handler
     ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(false);
-    calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+    calendarButton.setChecked(true);
+    calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
@@ -181,11 +181,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             // Then load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // When starred filter is turned off, disable today filter to show all events
-            isTodayChecked = false;
-            ToggleButton todayButton = findViewById(R.id.todayButton);
-            todayButton.setChecked(false);
-            todayButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+            // When turned off, just update display immediately
             updateDisplayedSummaries();
           }
         });
@@ -231,8 +227,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Loads favorite status for all summaries from the server. Called when returning to MainActivity
-   * with starred filter ON to ensure we have fresh favorite data for all events.
+   * Loads favorite status for displayed summaries only. Called when starred button is clicked ON.
    */
   private void loadFavoritesForDisplayedSummaries() {
     if (summaries == null || summaries.isEmpty()) {
@@ -242,11 +237,35 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     EventableApplication application = (EventableApplication) getApplication();
 
-    // Load favorites for ALL summaries, not just filtered ones
-    // This ensures starred filter can show all favorited events
-    AtomicInteger pendingRequests = new AtomicInteger(summaries.size());
+    // Apply filters to get displayed summaries (today, virtual, search)
+    List<Summary> displayedSummaries = new ArrayList<>(summaries);
 
-    for (Summary summary : summaries) {
+    if (isTodayChecked) {
+      Instant currentTime = Helpers.getTimeProvider().now();
+      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+      ZonedDateTime startOfToday =
+          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+      Instant todayStart = startOfToday.toInstant();
+      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
+      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
+      displayedSummaries = Summary.filterTime(displayedSummaries, todayStart, todayEnd);
+    }
+
+    if (isVirtualChecked) {
+      displayedSummaries = Summary.filterVirtual(displayedSummaries, true);
+    }
+
+    displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
+
+    if (displayedSummaries.isEmpty()) {
+      runOnUiThread(this::updateDisplayedSummaries);
+      return;
+    }
+
+    // Load favorites only for the filtered/displayed summaries
+    AtomicInteger pendingRequests = new AtomicInteger(displayedSummaries.size());
+
+    for (Summary summary : displayedSummaries) {
       application
           .getClient()
           .getFavorite(
@@ -358,7 +377,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, false);
+    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
