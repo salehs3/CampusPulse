@@ -40,8 +40,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private static final String PREF_KEY_VIRTUAL_CHECKED = "filter_virtual_checked";
   private static final String PREF_KEY_SEARCH_QUERY = "filter_search_query";
 
-  // Stores the list of event summaries we get from the server (starts empty)
-  private List<Summary> summaries = Collections.emptyList();
+  // Stores the list of event summaries we get from the server (starts null until loaded)
+  private List<Summary> summaries = null;
 
   // The adapter connects our data (summaries) to the RecyclerView (the scrollable list)
   private SummaryListAdapter listAdapter;
@@ -76,7 +76,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Pass a click callback that launches EventActivity when a summary is clicked
     listAdapter =
         new SummaryListAdapter(
-            summaries,
+            new ArrayList<>(),
             this,
             (clickedSummary) -> {
               // Create an intent to launch EventActivity
@@ -178,18 +178,33 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update the starred filter state
           isStarredChecked = isChecked;
 
-          // When starred filter is turned ON, first update UI to show filtered results
-          // (may be empty), then load favorites for currently displayed summaries
+          // When starred filter is turned ON or OFF, update the display
+          List<Summary> toDisplay;
+          EventableApplication app = (EventableApplication) getApplication();
+
           if (isChecked) {
-            // Update display first to show only cached favorites (may be 0 items)
-            updateDisplayedSummaries();
-            // Then load fresh favorite data from server
+            // When ON, filter for favorites
+            List<Summary> favoritesList = new ArrayList<>();
+            for (Summary summary : summaries) {
+              if (app.isFavoriteCached(summary.getId())) {
+                favoritesList.add(summary);
+              }
+            }
+            toDisplay = favoritesList;
+            // Load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // When starred filter is turned off, just update the display
-            updateDisplayedSummaries();
+            // When OFF, show the ENTIRE list
+            toDisplay = summaries;
           }
+
+          // Update the UI
+          listAdapter.setSummaries(toDisplay);
+          listAdapter.notifyDataSetChanged();
         });
+
+    // Load initial data from server
+    loadSummaries();
   }
 
   /**
@@ -200,7 +215,15 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   @Override
   protected void onResume() {
     super.onResume(); // Always call parent class first
-    loadSummaries(); // Fetch event data from the server
+
+    // If summaries is null, it means onCreate hasn't finished its initial load yet.
+    // Let onCreate handle it to avoid a race condition.
+    if (summaries == null) {
+      return;
+    }
+
+    // Re-fetch the data from the server
+    loadSummaries();
   }
 
   /**
