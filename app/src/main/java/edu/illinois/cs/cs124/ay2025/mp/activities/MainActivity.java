@@ -162,6 +162,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update button appearance based on checked state
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
+            // When starred filter is turned ON, load favorites for currently displayed summaries
+            loadFavoritesForDisplayedSummaries();
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
@@ -213,6 +215,59 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             });
   }
 
+  /**
+   * Loads favorite status for currently displayed summaries (after applying today/virtual/search
+   * filters). Only called when the starred button is clicked ON to avoid unnecessary API calls.
+   * This only loads favorites for the filtered list, not all 2320+ events.
+   */
+  private void loadFavoritesForDisplayedSummaries() {
+    if (summaries == null || summaries.isEmpty()) {
+      return;
+    }
+
+    EventableApplication application = (EventableApplication) getApplication();
+
+    // Apply all filters except starred to get the list of summaries that are currently displayed
+    List<Summary> displayedSummaries = summaries;
+
+    // Apply today filter
+    if (isTodayChecked) {
+      Instant currentTime = Helpers.getTimeProvider().now();
+      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+      ZonedDateTime startOfToday =
+          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+      Instant todayStart = startOfToday.toInstant();
+      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
+      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
+      displayedSummaries = Summary.filterTime(displayedSummaries, todayStart, todayEnd);
+    }
+
+    // Apply virtual filter
+    if (isVirtualChecked) {
+      displayedSummaries = Summary.filterVirtual(displayedSummaries, true);
+    }
+
+    // Apply search filter
+    displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
+
+    // Now load favorites ONLY for the filtered list (not all events in database)
+    for (Summary summary : displayedSummaries) {
+      application
+          .getClient()
+          .getFavorite(
+              summary.getId(),
+              (favoriteResult) -> {
+                try {
+                  boolean isFavorite = favoriteResult.getValue();
+                  application.updateFavoriteCache(summary.getId(), isFavorite);
+                  // Refresh the UI after each favorite loads
+                  runOnUiThread(this::updateDisplayedSummaries);
+                } catch (Exception e) {
+                  Log.d(TAG, "Could not load favorite status for " + summary.getId());
+                }
+              });
+    }
+  }
 
   /**
    * Updates the RecyclerView to display the summaries we fetched from the server. This must be
