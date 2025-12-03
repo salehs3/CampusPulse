@@ -22,6 +22,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
@@ -230,8 +231,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 EventableApplication app = (EventableApplication) getApplication();
 
                 // Create atomic counter to track completion of all favorite loads
-                java.util.concurrent.atomic.AtomicInteger pendingLoads =
-                    new java.util.concurrent.atomic.AtomicInteger(summaries.size());
+                AtomicInteger pendingLoads = new AtomicInteger(summaries.size());
 
                 // Load favorite status for each summary
                 for (Summary summary : summaries) {
@@ -290,8 +290,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     EventableApplication application = (EventableApplication) getApplication();
 
     // Create array to track completion of all favorite loads
-    java.util.concurrent.atomic.AtomicInteger pendingLoads =
-        new java.util.concurrent.atomic.AtomicInteger(summaries.size());
+    AtomicInteger pendingLoads = new AtomicInteger(summaries.size());
 
     // Load favorite status for each summary
     for (Summary summary : summaries) {
