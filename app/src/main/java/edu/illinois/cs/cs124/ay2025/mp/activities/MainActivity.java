@@ -275,7 +275,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Loads favorite status for displayed summaries only. Called when starred button is clicked ON.
+   * Loads favorite status for all summaries. Called when starred button is clicked ON.
    */
   private void loadFavoritesForDisplayedSummaries() {
     if (summaries == null || summaries.isEmpty()) {
@@ -285,35 +285,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     EventableApplication application = (EventableApplication) getApplication();
 
-    // Apply filters to get displayed summaries (today, virtual, search)
-    List<Summary> displayedSummaries = new ArrayList<>(summaries);
+    // Load favorites for ALL summaries (not just filtered ones)
+    // This ensures we have complete favorite data regardless of other filters
+    AtomicInteger pendingRequests = new AtomicInteger(summaries.size());
 
-    if (isTodayChecked) {
-      Instant currentTime = Helpers.getTimeProvider().now();
-      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
-      ZonedDateTime startOfToday =
-          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
-      Instant todayStart = startOfToday.toInstant();
-      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
-      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
-      displayedSummaries = Summary.filterTime(displayedSummaries, todayStart, todayEnd);
-    }
-
-    if (isVirtualChecked) {
-      displayedSummaries = Summary.filterVirtual(displayedSummaries, true);
-    }
-
-    displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
-
-    if (displayedSummaries.isEmpty()) {
-      runOnUiThread(this::updateDisplayedSummaries);
-      return;
-    }
-
-    // Load favorites only for the filtered/displayed summaries
-    AtomicInteger pendingRequests = new AtomicInteger(displayedSummaries.size());
-
-    for (Summary summary : displayedSummaries) {
+    for (Summary summary : summaries) {
       application
           .getClient()
           .getFavorite(
