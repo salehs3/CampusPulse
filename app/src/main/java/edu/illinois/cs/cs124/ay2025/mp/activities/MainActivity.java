@@ -243,6 +243,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                           (favResult) -> {
                             try {
                               boolean isFav = favResult.getValue();
+                              summary.setFavorite(isFav);
                               app.updateFavoriteCache(eventId, isFav);
                             } catch (Exception ex) {
                               Log.d(TAG, "Could not load favorite for " + eventId);
@@ -304,6 +305,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 try {
                   // Update the cache with the favorite status from the server
                   boolean isFavorite = result.getValue();
+                  summary.setFavorite(isFavorite);
                   application.updateFavoriteCache(eventId, isFavorite);
                 } catch (Exception e) {
                   // If request fails, just log it

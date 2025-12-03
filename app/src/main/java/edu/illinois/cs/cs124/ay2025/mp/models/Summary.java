@@ -38,6 +38,16 @@ public class Summary implements Comparable<Summary> {
     return virtual;
   }
 
+  private boolean favorite;
+
+  public boolean isFavorite() {
+    return favorite;
+  }
+
+  public void setFavorite(boolean setFavorite) {
+    this.favorite = setFavorite;
+  }
+
   @NonNull
   public final String getId() {
     return id;
