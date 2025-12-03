@@ -21,7 +21,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -265,7 +264,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 } else if (isTodayChecked) {
                   // Filter for today's events
                   Instant currentTime = Helpers.getTimeProvider().now();
-                  ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+                  ZonedDateTime currentChicagoTime =
+                      currentTime.atZone(ZoneId.of("America/Chicago"));
                   ZonedDateTime startOfToday =
                       currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
                   Instant todayStart = startOfToday.toInstant();
