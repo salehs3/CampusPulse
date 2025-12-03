@@ -175,6 +175,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Log the button state for debugging
           Log.d(TAG, "Starred button changed. Showing starred events: " + isChecked);
 
+          // Guard clause: Do nothing if the data hasn't loaded yet
+          if (summaries == null || summaries.isEmpty()) {
+            return;
+          }
+
           // Update the starred filter state
           isStarredChecked = isChecked;
 
@@ -241,8 +246,43 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             (result) -> {
               // This callback runs when the server responds (on a background thread)
               try {
-                // Extract the list of summaries from the result
+                // Store the full list of summaries
                 summaries = result.getValue();
+
+                // Create a filtered list based on current filter states
+                List<Summary> toDisplay;
+
+                if (isStarredChecked) {
+                  // If starred filter is ON, show only favorites
+                  EventableApplication app = (EventableApplication) getApplication();
+                  List<Summary> favoritesList = new ArrayList<>();
+                  for (Summary summary : summaries) {
+                    if (app.isFavoriteCached(summary.getId())) {
+                      favoritesList.add(summary);
+                    }
+                  }
+                  toDisplay = favoritesList;
+                } else if (isTodayChecked) {
+                  // Filter for today's events
+                  Instant currentTime = Helpers.getTimeProvider().now();
+                  ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+                  ZonedDateTime startOfToday =
+                      currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+                  Instant todayStart = startOfToday.toInstant();
+                  ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
+                  Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
+                  toDisplay = Summary.filterTime(summaries, todayStart, todayEnd);
+                } else {
+                  // Show entire list
+                  toDisplay = summaries;
+                }
+
+                // Update the UI with the filtered list
+                runOnUiThread(
+                    () -> {
+                      listAdapter.setSummaries(toDisplay);
+                      listAdapter.notifyDataSetChanged();
+                    });
 
                 // Always reload favorites when summaries are loaded to ensure cache is fresh
                 // This handles the case where favorites were changed in EventActivity
@@ -264,20 +304,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                                 Log.d(TAG, "Could not reload favorite for " + favoriteId);
                               } finally {
                                 if (pendingFavorites.decrementAndGet() == 0) {
-                                  // All favorites reloaded, now update UI
+                                  // All favorites reloaded, now update UI again
                                   runOnUiThread(this::updateDisplayedSummaries);
-                                  // If starred filter is ON, also reload favorites for displayed
-                                  // items
-                                  if (isStarredChecked) {
-                                    loadFavoritesForDisplayedSummaries();
-                                  }
                                 }
                               }
                             });
                   }
                 } else {
-                  // No cached favorites, just update UI
-                  runOnUiThread(this::updateDisplayedSummaries);
                   // If starred filter is ON, load favorites for displayed items
                   if (isStarredChecked) {
                     loadFavoritesForDisplayedSummaries();
