@@ -226,6 +226,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Store the full list of summaries
                 summaries = result.getValue();
 
+                // If summaries list is empty, just update UI immediately
+                if (summaries.isEmpty()) {
+                  runOnUiThread(this::updateDisplayedSummaries);
+                  return;
+                }
+
                 // Load favorite status for ALL summaries to populate the cache
                 // This ensures the starred filter works even if favorites were set via API
                 EventableApplication app = (EventableApplication) getApplication();
