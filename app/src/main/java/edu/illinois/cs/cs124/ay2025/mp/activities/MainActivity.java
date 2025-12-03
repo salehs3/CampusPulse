@@ -47,7 +47,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private SummaryListAdapter listAdapter;
 
   // Tracks whether the today filter button is checked (true = show only today's events)
-  private boolean isTodayChecked = true;
+  private boolean isTodayChecked = false;
 
   // Tracks whether the virtual filter button is checked (true = show only virtual/online events)
   private boolean isVirtualChecked = false;
@@ -110,8 +110,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Set up the calendar button (today filter) click handler
     ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(true);
-    calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+    calendarButton.setChecked(false);
+    calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
@@ -181,7 +181,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             // Then load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // When turned off, just update display immediately
+            // When starred filter is turned off, disable today filter to show all events
+            isTodayChecked = false;
+            ToggleButton todayButton = findViewById(R.id.todayButton);
+            todayButton.setChecked(false);
+            todayButton.setAlpha(BUTTON_ALPHA_INACTIVE);
             updateDisplayedSummaries();
           }
         });
@@ -354,7 +358,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
+    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, false);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
