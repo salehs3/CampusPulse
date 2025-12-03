@@ -173,8 +173,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update the starred filter state
           isStarredChecked = isChecked;
 
-          // When starred filter is turned ON, load favorites for currently displayed summaries
+          // When starred filter is turned ON, first update UI to show filtered results
+          // (may be empty), then load favorites for currently displayed summaries
           if (isChecked) {
+            // Update display first to show only cached favorites (may be 0 items)
+            updateDisplayedSummaries();
+            // Then load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
             // When turned off, just update display immediately

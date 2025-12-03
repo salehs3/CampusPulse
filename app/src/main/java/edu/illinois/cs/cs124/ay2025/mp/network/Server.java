@@ -296,6 +296,9 @@ public final class Server extends Dispatcher {
 
   private Server() {
     Logger.getLogger(MockWebServer.class.getName()).setLevel(Level.SEVERE);
+    summaries.clear();
+    events.clear();
+    favorites.clear();
     loadData();
   }
 
