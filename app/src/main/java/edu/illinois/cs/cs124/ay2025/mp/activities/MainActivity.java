@@ -182,8 +182,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             return;
           }
 
-          // Update the display to apply the new filter state
+          // Update the display immediately to apply the filter using current cache state
           updateDisplayedSummaries();
+
+          // If starred filter is turned ON, refresh favorites from server
+          if (isChecked) {
+            loadFavoritesForDisplayedSummaries();
+          }
         });
 
     // Load initial data from server
