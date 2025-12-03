@@ -32,8 +32,8 @@ public final class EventableApplication extends Application {
   // The HTTP client that will make requests to fetch event data (created in onCreate)
   private Client client;
 
-  // Cache of favorite event IDs (synchronized for thread safety across activities)
-  private final Set<String> favoriteEventIds = Collections.synchronizedSet(new HashSet<>());
+  // Cache of favorite event IDs
+  private final Set<String> favoriteEventIds = new HashSet<>();
 
   /**
    * onCreate is called ONCE when the app first starts (before MainActivity is created). This is
@@ -105,7 +105,7 @@ public final class EventableApplication extends Application {
   /**
    * Returns the set of favorite event IDs for filtering purposes.
    *
-   * @return A synchronized set of favorite event IDs
+   * @return A set of favorite event IDs
    */
   public Set<String> getFavoriteEventIds() {
     return favoriteEventIds;
