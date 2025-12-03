@@ -23,6 +23,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
@@ -162,8 +163,6 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update button appearance based on checked state
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
-            // When starred filter is turned ON, load favorites for currently displayed summaries
-            loadFavoritesForDisplayedSummaries();
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
@@ -171,9 +170,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Log the button state for debugging
           Log.d(TAG, "Starred button changed. Showing starred events: " + isChecked);
 
-          // Update the starred filter state and refresh the displayed events
+          // Update the starred filter state
           isStarredChecked = isChecked;
-          updateDisplayedSummaries();
+
+          // When starred filter is turned ON, load favorites for currently displayed summaries
+          if (isChecked) {
+            loadFavoritesForDisplayedSummaries();
+          } else {
+            // When turned off, just update display immediately
+            updateDisplayedSummaries();
+          }
         });
   }
 
@@ -206,8 +212,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
-                // Update the UI on the main thread
-                runOnUiThread(this::updateDisplayedSummaries);
+                if (isStarredChecked) {
+                  loadFavoritesForDisplayedSummaries();
+                } else {
+                  // Update the UI on the main thread
+                  runOnUiThread(this::updateDisplayedSummaries);
+                }
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
                 Log.e(TAG, "Error updating summary list", e);
@@ -222,13 +232,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFavoritesForDisplayedSummaries() {
     if (summaries == null || summaries.isEmpty()) {
+      runOnUiThread(this::updateDisplayedSummaries);
       return;
     }
 
     EventableApplication application = (EventableApplication) getApplication();
 
     // Apply all filters except starred to get the list of summaries that are currently displayed
-    List<Summary> displayedSummaries = summaries;
+    List<Summary> displayedSummaries = new ArrayList<>(summaries);
 
     // Apply today filter
     if (isTodayChecked) {
@@ -250,6 +261,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Apply search filter
     displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
 
+    if (displayedSummaries.isEmpty()) {
+      runOnUiThread(this::updateDisplayedSummaries);
+      return;
+    }
+
+    AtomicInteger pendingRequests = new AtomicInteger(displayedSummaries.size());
+
     // Now load favorites ONLY for the filtered list (not all events in database)
     for (Summary summary : displayedSummaries) {
       application
@@ -260,10 +278,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 try {
                   boolean isFavorite = favoriteResult.getValue();
                   application.updateFavoriteCache(summary.getId(), isFavorite);
-                  // Refresh the UI after each favorite loads
-                  runOnUiThread(this::updateDisplayedSummaries);
                 } catch (Exception e) {
                   Log.d(TAG, "Could not load favorite status for " + summary.getId());
+                } finally {
+                  if (pendingRequests.decrementAndGet() == 0) {
+                    runOnUiThread(this::updateDisplayedSummaries);
+                  }
                 }
               });
     }
@@ -280,7 +300,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     }
 
     // Start with all summaries from the server
-    List<Summary> displayedSummaries = summaries;
+    List<Summary> displayedSummaries = new ArrayList<>(summaries);
 
     // Apply today filter if the today button is checked
     if (isTodayChecked) {

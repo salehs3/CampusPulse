@@ -275,7 +275,7 @@ public class Summary implements Comparable<Summary> {
       }
     }
 
-    matchingSummaries.sort((s1, s2) -> s1.title.compareTo(s2.title));
+    Collections.sort(matchingSummaries);
 
     return matchingSummaries;
   }
