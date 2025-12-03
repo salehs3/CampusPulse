@@ -182,14 +182,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             return;
           }
 
-          // Always update the display first to immediately apply the filter
+          // Update the display to apply the new filter state
           updateDisplayedSummaries();
-
-          if (isChecked) {
-            // When toggle is ON, load fresh favorite data from server
-            // This will update the display again after favorites are loaded
-            loadFavoritesForDisplayedSummaries();
-          }
         });
 
     // Load initial data from server
