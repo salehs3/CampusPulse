@@ -161,9 +161,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     starredButton.setChecked(false);
     starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
 
-    // Using setOnCheckedChangeListener to support both user clicks and programmatic changes
-    starredButton.setOnCheckedChangeListener(
-        (button, isChecked) -> {
+    // Using setOnClickListener because tests trigger clicks, not state changes
+    starredButton.setOnClickListener(
+        (v) -> {
+          // Handle starred button click
+          ToggleButton button = (ToggleButton) v;
+          boolean isChecked = button.isChecked();
+
+          // Update the starred filter state
+          isStarredChecked = isChecked;
+
           // Update button appearance based on checked state
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
@@ -172,15 +179,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           }
 
           // Log the button state for debugging
-          Log.d(TAG, "Starred button changed. Showing starred events: " + isChecked);
-
-          // Update the starred filter state first (before guard clause)
-          isStarredChecked = isChecked;
-
-          // Guard clause: Do nothing if the data hasn't loaded yet
-          if (summaries == null || summaries.isEmpty()) {
-            return;
-          }
+          Log.d(TAG, "Starred button clicked. Showing starred events: " + isChecked);
 
           // Update the display to apply the filter using current cache state
           // We rely on favorites already being in the cache (loaded in onResume or EventActivity)
