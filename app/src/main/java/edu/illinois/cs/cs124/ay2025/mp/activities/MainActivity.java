@@ -182,13 +182,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             return;
           }
 
-          // Update the display immediately to apply the filter using current cache state
+          // Update the display to apply the filter using current cache state
+          // We rely on favorites already being in the cache (loaded in onResume or EventActivity)
           updateDisplayedSummaries();
-
-          // If starred filter is turned ON, refresh favorites from server
-          if (isChecked) {
-            loadFavoritesForDisplayedSummaries();
-          }
         });
 
     // Load initial data from server
@@ -242,6 +238,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
                 if (!cachedFavoriteIds.isEmpty()) {
                   // There are cached favorites, reload them from server
+                  // This makes only a few requests (one per cached favorite), not thousands
                   AtomicInteger pendingFavorites = new AtomicInteger(cachedFavoriteIds.size());
                   for (String favoriteId : cachedFavoriteIds) {
                     app.getClient()
@@ -261,52 +258,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                               }
                             });
                   }
-                } else {
-                  // If starred filter is ON, load favorites for displayed items
-                  if (isStarredChecked) {
-                    loadFavoritesForDisplayedSummaries();
-                  }
                 }
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
                 Log.e(TAG, "Error updating summary list", e);
               }
             });
-  }
-
-  /**
-   * Loads favorite status for all summaries. Called when starred button is clicked ON.
-   */
-  private void loadFavoritesForDisplayedSummaries() {
-    if (summaries == null || summaries.isEmpty()) {
-      runOnUiThread(this::updateDisplayedSummaries);
-      return;
-    }
-
-    EventableApplication application = (EventableApplication) getApplication();
-
-    // Load favorites for ALL summaries (not just filtered ones)
-    // This ensures we have complete favorite data regardless of other filters
-    AtomicInteger pendingRequests = new AtomicInteger(summaries.size());
-
-    for (Summary summary : summaries) {
-      application
-          .getClient()
-          .getFavorite(
-              summary.getId(),
-              (favoriteResult) -> {
-                try {
-                  boolean isFavorite = favoriteResult.getValue();
-                  application.updateFavoriteCache(summary.getId(), isFavorite);
-                } catch (Exception e) {
-                  Log.d(TAG, "Could not load favorite status for " + summary.getId());
-                } finally {
-                  if (pendingRequests.decrementAndGet() == 0) {
-                    runOnUiThread(this::updateDisplayedSummaries);
-                  }
-                }
-              });
-    }
   }
 
   /**
