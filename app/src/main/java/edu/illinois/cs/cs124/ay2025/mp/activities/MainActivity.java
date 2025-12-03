@@ -174,13 +174,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Log the button state for debugging
           Log.d(TAG, "Starred button changed. Showing starred events: " + isChecked);
 
+          // Update the starred filter state first (before guard clause)
+          isStarredChecked = isChecked;
+
           // Guard clause: Do nothing if the data hasn't loaded yet
           if (summaries == null || summaries.isEmpty()) {
             return;
           }
-
-          // Update the starred filter state
-          isStarredChecked = isChecked;
 
           if (isChecked) {
             // When toggle is ON, load fresh favorite data from server
