@@ -182,16 +182,29 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update the starred filter state
           isStarredChecked = isChecked;
 
-          // When starred filter changes, update display immediately then load fresh data
+          // Filter based on toggle state
+          List<Summary> toDisplay;
+          EventableApplication app = (EventableApplication) getApplication();
+
           if (isChecked) {
-            // Update display first to show cached favorites (may be 0 items)
-            updateDisplayedSummaries();
-            // Then load fresh favorite data from server
+            // When toggle is ON, filter for favorites
+            List<Summary> favoritesList = new ArrayList<>();
+            for (Summary summary : summaries) {
+              if (app.isFavoriteCached(summary.getId())) {
+                favoritesList.add(summary);
+              }
+            }
+            toDisplay = favoritesList;
+            // Load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // Just update the display with current filter states (respects today filter)
-            updateDisplayedSummaries();
+            // When toggle is OFF, show the ENTIRE list
+            toDisplay = summaries;
           }
+
+          // Update the adapter
+          listAdapter.setSummaries(toDisplay);
+          listAdapter.notifyDataSetChanged();
         });
 
     // Load initial data from server
