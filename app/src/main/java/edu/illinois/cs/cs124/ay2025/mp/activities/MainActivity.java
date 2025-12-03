@@ -23,7 +23,6 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
@@ -205,8 +204,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
-                // Switch back to the main UI thread to update the screen
-                // (Android requires all UI updates to happen on the main thread)
+                // Update the UI on the main thread
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
@@ -260,82 +258,22 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Apply starred filter if the starred button is checked
     if (isStarredChecked) {
-      filterStarredSummaries(displayedSummaries);
-    } else {
-      // Tell the adapter about the new data, which triggers the RecyclerView to refresh
-      // This runs even if the list is empty, so the adapter knows there are no events to display
-      listAdapter.setSummaries(displayedSummaries);
-    }
-  }
+      // Get the application to access the shared favorite cache
+      EventableApplication application = (EventableApplication) getApplication();
 
-  /**
-   * Filters summaries to show only starred/favorite events. This method fetches the favorite status
-   * for each summary asynchronously and updates the UI when all requests complete.
-   *
-   * @param summariesToFilter The list of summaries to filter
-   */
-  private void filterStarredSummaries(List<Summary> summariesToFilter) {
-    // If the list is empty, just update the adapter
-    if (summariesToFilter.isEmpty()) {
-      listAdapter.setSummaries(summariesToFilter);
-      return;
+      // Filter to show only events that are marked as favorites in the cache
+      List<Summary> starredSummaries = new ArrayList<>();
+      for (Summary summary : displayedSummaries) {
+        if (application.isFavoriteCached(summary.getId())) {
+          starredSummaries.add(summary);
+        }
+      }
+      displayedSummaries = starredSummaries;
     }
 
-    // Get the application object to access the HTTP client
-    EventableApplication application = (EventableApplication) getApplication();
-
-    // List to collect starred summaries (preserving order)
-    List<Summary> starredSummaries = Collections.synchronizedList(new ArrayList<>());
-
-    // Counter to track how many requests have completed
-    AtomicInteger completedRequests = new AtomicInteger(0);
-    int totalRequests = summariesToFilter.size();
-
-    // For each summary, fetch its favorite status
-    for (Summary summary : summariesToFilter) {
-      application
-          .getClient()
-          .getFavorite(
-              summary.getId(),
-              (result) -> {
-                try {
-                  // Extract the favorite status
-                  boolean isFavorite = result.getValue();
-
-                  // If this event is a favorite, add it to the starred list
-                  if (isFavorite) {
-                    starredSummaries.add(summary);
-                  }
-                } catch (Exception e) {
-                  // If something goes wrong, log the error for debugging
-                  Log.e(TAG, "Error loading favorite status for event: " + summary.getId(), e);
-                }
-
-                // Increment the completed requests counter
-                int completed = completedRequests.incrementAndGet();
-
-                // If all requests have completed, update the UI
-                if (completed == totalRequests) {
-                  // Sort starred summaries to maintain the original order
-                  List<Summary> orderedStarredSummaries = new ArrayList<>();
-                  for (Summary originalSummary : summariesToFilter) {
-                    if (starredSummaries.contains(originalSummary)) {
-                      orderedStarredSummaries.add(originalSummary);
-                    }
-                  }
-                  // Update the adapter on the UI thread
-                  runOnUiThread(
-                      () -> {
-                        listAdapter.setSummaries(orderedStarredSummaries);
-                        Log.d(
-                            TAG,
-                            "Starred filter applied: "
-                                + orderedStarredSummaries.size()
-                                + " starred events");
-                      });
-                }
-              });
-    }
+    // Tell the adapter about the new data, which triggers the RecyclerView to refresh
+    // This runs even if the list is empty, so the adapter knows there are no events to display
+    listAdapter.setSummaries(displayedSummaries);
   }
 
   /**
@@ -362,22 +300,28 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Loads saved filter state from SharedPreferences.
-   * Should be called early in onCreate() before UI initialization.
+   * Loads saved filter state from SharedPreferences. Should be called early in onCreate() before UI
+   * initialization.
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
     isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
-    Log.d(TAG, "Loaded filter state - Today: " + isTodayChecked
-        + ", Virtual: " + isVirtualChecked
-        + ", Search: '" + currentSearchQuery + "'");
+    Log.d(
+        TAG,
+        "Loaded filter state - Today: "
+            + isTodayChecked
+            + ", Virtual: "
+            + isVirtualChecked
+            + ", Search: '"
+            + currentSearchQuery
+            + "'");
   }
 
   /**
-   * Saves current filter state to SharedPreferences.
-   * Should be called whenever any filter value changes.
+   * Saves current filter state to SharedPreferences. Should be called whenever any filter value
+   * changes.
    */
   private void saveFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
@@ -386,8 +330,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     editor.putBoolean(PREF_KEY_VIRTUAL_CHECKED, isVirtualChecked);
     editor.putString(PREF_KEY_SEARCH_QUERY, currentSearchQuery);
     editor.apply();
-    Log.d(TAG, "Saved filter state - Today: " + isTodayChecked
-        + ", Virtual: " + isVirtualChecked
-        + ", Search: '" + currentSearchQuery + "'");
+    Log.d(
+        TAG,
+        "Saved filter state - Today: "
+            + isTodayChecked
+            + ", Virtual: "
+            + isVirtualChecked
+            + ", Search: '"
+            + currentSearchQuery
+            + "'");
   }
 }

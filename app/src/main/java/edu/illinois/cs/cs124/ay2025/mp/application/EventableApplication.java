@@ -4,6 +4,9 @@ import android.app.Application;
 import android.os.Build;
 import edu.illinois.cs.cs124.ay2025.mp.network.Client;
 import edu.illinois.cs.cs124.ay2025.mp.network.Server;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * EventableApplication - The FIRST thing created when the app starts.
@@ -28,6 +31,9 @@ public final class EventableApplication extends Application {
 
   // The HTTP client that will make requests to fetch event data (created in onCreate)
   private Client client;
+
+  // Cache of favorite event IDs (synchronized for thread safety across activities)
+  private final Set<String> favoriteEventIds = Collections.synchronizedSet(new HashSet<>());
 
   /**
    * onCreate is called ONCE when the app first starts (before MainActivity is created). This is
@@ -69,5 +75,39 @@ public final class EventableApplication extends Application {
    */
   public Client getClient() {
     return client;
+  }
+
+  /**
+   * Updates the local favorite cache when a favorite status changes. This should be called whenever
+   * setFavorite() is called, so the cache stays in sync with the server.
+   *
+   * @param eventId The ID of the event
+   * @param isFavorite Whether the event is marked as favorite
+   */
+  public void updateFavoriteCache(String eventId, boolean isFavorite) {
+    if (isFavorite) {
+      favoriteEventIds.add(eventId);
+    } else {
+      favoriteEventIds.remove(eventId);
+    }
+  }
+
+  /**
+   * Checks if an event is in the local favorite cache.
+   *
+   * @param eventId The ID of the event to check
+   * @return true if the event is cached as a favorite, false otherwise
+   */
+  public boolean isFavoriteCached(String eventId) {
+    return favoriteEventIds.contains(eventId);
+  }
+
+  /**
+   * Returns the set of favorite event IDs for filtering purposes.
+   *
+   * @return A synchronized set of favorite event IDs
+   */
+  public Set<String> getFavoriteEventIds() {
+    return favoriteEventIds;
   }
 }

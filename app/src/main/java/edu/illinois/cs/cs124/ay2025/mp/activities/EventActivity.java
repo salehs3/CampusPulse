@@ -58,6 +58,10 @@ public final class EventActivity extends Activity {
         (button, isChecked) -> {
           // Save the favorite status to the server
           EventableApplication application = (EventableApplication) getApplication();
+
+          // Update the local cache immediately for better responsiveness
+          application.updateFavoriteCache(eventId, isChecked);
+
           application
               .getClient()
               .setFavorite(
@@ -69,11 +73,16 @@ public final class EventActivity extends Activity {
                       // Extract the favorite status that was set
                       boolean favoriteStatus = result.getValue();
 
+                      // Update cache again to ensure it matches server response
+                      application.updateFavoriteCache(eventId, favoriteStatus);
+
                       // Log for debugging
                       Log.d(TAG, "Favorite status set to: " + favoriteStatus);
                     } catch (Exception e) {
                       // If something goes wrong, log the error and revert the button state
                       Log.e(TAG, "Error setting favorite status", e);
+                      // Revert the cache update
+                      application.updateFavoriteCache(eventId, !isChecked);
                       runOnUiThread(() -> button.setChecked(!isChecked));
                     }
                   });
@@ -146,6 +155,9 @@ public final class EventActivity extends Activity {
                 // Extract the favorite status from the result
                 boolean isFavorite = result.getValue();
 
+                // Update the cache with the favorite status from the server
+                application.updateFavoriteCache(eventId, isFavorite);
+
                 // Switch back to the main UI thread to update the favorite button
                 runOnUiThread(() -> updateFavoriteButton(isFavorite));
               } catch (Exception e) {
@@ -166,6 +178,10 @@ public final class EventActivity extends Activity {
         (button, isChecked) -> {
           // Save the favorite status to the server
           EventableApplication application = (EventableApplication) getApplication();
+
+          // Update the local cache immediately for better responsiveness
+          application.updateFavoriteCache(eventId, isChecked);
+
           application
               .getClient()
               .setFavorite(
@@ -177,11 +193,16 @@ public final class EventActivity extends Activity {
                       // Extract the favorite status that was set
                       boolean favoriteStatus = result.getValue();
 
+                      // Update cache again to ensure it matches server response
+                      application.updateFavoriteCache(eventId, favoriteStatus);
+
                       // Log for debugging
                       Log.d(TAG, "Favorite status set to: " + favoriteStatus);
                     } catch (Exception e) {
                       // If something goes wrong, log the error and revert the button state
                       Log.e(TAG, "Error setting favorite status", e);
+                      // Revert the cache update
+                      application.updateFavoriteCache(eventId, !isChecked);
                       runOnUiThread(() -> button.setChecked(!isChecked));
                     }
                   });
