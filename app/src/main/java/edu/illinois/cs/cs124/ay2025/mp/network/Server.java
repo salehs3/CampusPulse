@@ -7,6 +7,7 @@ import androidx.annotation.NonNull;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.illinois.cs.cs124.ay2025.mp.application.EventableApplication;
+import edu.illinois.cs.cs124.ay2025.mp.helpers.Helpers;
 import edu.illinois.cs.cs124.ay2025.mp.models.Event;
 import edu.illinois.cs.cs124.ay2025.mp.models.EventData;
 import edu.illinois.cs.cs124.ay2025.mp.models.Favorite;
@@ -14,6 +15,9 @@ import edu.illinois.cs.cs124.ay2025.mp.models.Summary;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,9 +58,29 @@ public final class Server extends Dispatcher {
           .setBody("400: Bad Request");
 
   private MockResponse getSummaries() throws JsonProcessingException {
-    // Return all summaries without date filtering
-    // MainActivity will handle filtering based on the today button state
-    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(summaries));
+    // Filter summaries to only include events starting today or later
+    // Get current time and convert to America/Chicago timezone
+    Instant currentTime = Helpers.getTimeProvider().now();
+    ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+
+    // Calculate start of today (midnight) in America/Chicago timezone
+    ZonedDateTime startOfToday =
+        currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+    Instant todayStart = startOfToday.toInstant();
+
+    // Filter summaries to only include events starting today or later
+    List<Summary> filteredSummaries = new ArrayList<>();
+    for (Summary summary : summaries) {
+      // Parse the event's start time
+      Instant eventStart = Instant.parse(summary.getStart());
+
+      // Only include events that start at or after midnight today
+      if (!eventStart.isBefore(todayStart)) {
+        filteredSummaries.add(summary);
+      }
+    }
+
+    return makeOKJSONResponse(OBJECT_MAPPER.writeValueAsString(filteredSummaries));
   }
 
   private MockResponse getEvent(@NonNull String eventId) throws JsonProcessingException {
