@@ -204,6 +204,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
+                // Load favorites for the summaries we received
+                loadFavoritesForCurrentSummaries();
+
                 // Update the UI on the main thread
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
@@ -211,6 +214,40 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 Log.e(TAG, "Error updating summary list", e);
               }
             });
+  }
+
+  /**
+   * Loads favorite status for the current summaries from the server. This is needed to sync the
+   * cache with server-side favorites that may have been set outside the app.
+   */
+  private void loadFavoritesForCurrentSummaries() {
+    if (summaries == null || summaries.isEmpty()) {
+      return;
+    }
+
+    EventableApplication application = (EventableApplication) getApplication();
+
+    // Load favorites for all current summaries to sync cache with server
+    for (Summary summary : summaries) {
+      String eventId = summary.getId();
+      application
+          .getClient()
+          .getFavorite(
+              eventId,
+              (result) -> {
+                try {
+                  boolean isFavorite = result.getValue();
+                  application.updateFavoriteCache(eventId, isFavorite);
+
+                  // If starred filter is active, refresh display when favorites are loaded
+                  if (isStarredChecked) {
+                    runOnUiThread(this::updateDisplayedSummaries);
+                  }
+                } catch (Exception e) {
+                  // Silently ignore errors to avoid spam for thousands of events
+                }
+              });
+    }
   }
 
   /**
