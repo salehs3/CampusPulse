@@ -157,7 +157,12 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
         });
 
     // Set up the starred button (starred/favorite events filter) click handler
+    // Initialize button state before setting listener to prevent spurious events
     ToggleButton starredButton = findViewById(R.id.starredButton);
+    starredButton.setChecked(false);
+    starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+
+    // Using setOnCheckedChangeListener to support both user clicks and programmatic changes
     starredButton.setOnCheckedChangeListener(
         (button, isChecked) -> {
           // Update button appearance based on checked state
@@ -181,11 +186,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             // Then load fresh favorite data from server
             loadFavoritesForDisplayedSummaries();
           } else {
-            // When starred filter is turned off, disable today filter to show all events
-            isTodayChecked = false;
-            ToggleButton todayButton = findViewById(R.id.todayButton);
-            todayButton.setChecked(false);
-            todayButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+            // When starred filter is turned off, just update the display
             updateDisplayedSummaries();
           }
         });
@@ -220,13 +221,44 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Extract the list of summaries from the result
                 summaries = result.getValue();
 
-                // If starred filter is ON, reload favorites before updating UI
-                if (isStarredChecked) {
-                  runOnUiThread(this::updateDisplayedSummaries);
-                  loadFavoritesForDisplayedSummaries();
+                // Always reload favorites when summaries are loaded to ensure cache is fresh
+                // This handles the case where favorites were changed in EventActivity
+                EventableApplication app = (EventableApplication) getApplication();
+                java.util.Set<String> cachedFavoriteIds = app.getFavoriteEventIds();
+
+                if (!cachedFavoriteIds.isEmpty()) {
+                  // There are cached favorites, reload them from server
+                  AtomicInteger pendingFavorites = new AtomicInteger(cachedFavoriteIds.size());
+                  for (String favoriteId : cachedFavoriteIds) {
+                    app.getClient()
+                        .getFavorite(
+                            favoriteId,
+                            (favResult) -> {
+                              try {
+                                boolean isFav = favResult.getValue();
+                                app.updateFavoriteCache(favoriteId, isFav);
+                              } catch (Exception ex) {
+                                Log.d(TAG, "Could not reload favorite for " + favoriteId);
+                              } finally {
+                                if (pendingFavorites.decrementAndGet() == 0) {
+                                  // All favorites reloaded, now update UI
+                                  runOnUiThread(this::updateDisplayedSummaries);
+                                  // If starred filter is ON, also reload favorites for displayed
+                                  // items
+                                  if (isStarredChecked) {
+                                    loadFavoritesForDisplayedSummaries();
+                                  }
+                                }
+                              }
+                            });
+                  }
                 } else {
-                  // Update the UI on the main thread
+                  // No cached favorites, just update UI
                   runOnUiThread(this::updateDisplayedSummaries);
+                  // If starred filter is ON, load favorites for displayed items
+                  if (isStarredChecked) {
+                    loadFavoritesForDisplayedSummaries();
+                  }
                 }
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
