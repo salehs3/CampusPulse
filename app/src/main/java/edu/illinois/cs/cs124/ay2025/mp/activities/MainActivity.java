@@ -275,7 +275,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Start with all summaries from the server
     List<Summary> displayedSummaries = new ArrayList<>(summaries);
 
-    // Apply today filter if the today button is checked
+    // Apply today filter if the today button is checked (applies to both starred and non-starred)
     if (isTodayChecked) {
       // Get the current time using the time provider (not Instant.now() directly)
       Instant currentTime = Helpers.getTimeProvider().now();
