@@ -4,7 +4,6 @@ import android.app.Application;
 import android.os.Build;
 import edu.illinois.cs.cs124.ay2025.mp.network.Client;
 import edu.illinois.cs.cs124.ay2025.mp.network.Server;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
