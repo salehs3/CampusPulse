@@ -156,31 +156,33 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           updateDisplayedSummaries();
         });
 
-    // Set up the starred button (starred/favorite events filter) click handler
-    // Initialize button state before setting listener to prevent spurious events
+    // Starred button
     ToggleButton starredButton = findViewById(R.id.starredButton);
-    starredButton.setChecked(false);
-    starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
 
-    // When user clicks the starred button, it calls updateDisplayedSummaries()
-    // Uses cached favorites from FavoritesRepository; no server calls
+    // Initialize the checked state from isStarredChecked
+    starredButton.setChecked(isStarredChecked);
+
+    // Set alpha based on checked state
+    if (isStarredChecked) {
+      starredButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+    } else {
+      starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+    }
+
+    // Handle starred button clicks
     starredButton.setOnCheckedChangeListener(
-        (buttonView, isChecked) -> {
-          // Update the starred filter state
-          isStarredChecked = isChecked;
-
-          // Update button appearance
+        (button, isChecked) -> {
+          // Update appearance
           if (isChecked) {
-            starredButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+            button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
-            starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+            button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
 
-          // Log the button state for debugging
-          Log.d(TAG, "Starred button clicked. Showing starred events: " + isChecked);
-
-          // Refilter displayed summaries using cached favorites
-          updateDisplayedSummaries();
+          // Update state
+          isStarredChecked = isChecked;
+          saveFilterState(); // Save to SharedPreferences
+          updateDisplayedSummaries(); // Refresh adapter with filtered items
         });
 
     // Load initial data from server
@@ -243,33 +245,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       return;
     }
 
-    // Start with all summaries from the server
-    List<Summary> filteredSummaries = summaries;
+    List<Summary> allSummaries = summaries;
+    List<Summary> filteredSummaries = new ArrayList<>();
 
-    // Apply TODAY filter
-    if (isTodayChecked) {
-      Instant now = Helpers.getTimeProvider().now();
-      ZonedDateTime nowZoned = now.atZone(ZoneId.of("America/Chicago"));
-      ZonedDateTime startOfToday =
-          nowZoned.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
-      ZonedDateTime endOfToday = startOfToday.plusDays(1).minusNanos(1);
+    for (Summary summary : allSummaries) {
+      boolean passesTodayFilter = !isTodayChecked || isToday(summary);
+      boolean passesStarredFilter = !isStarredChecked || isStarred(summary);
 
-      filteredSummaries =
-          Summary.filterTime(filteredSummaries, startOfToday.toInstant(), endOfToday.toInstant());
-    }
-
-    // Apply STARRED filter
-    if (isStarredChecked) {
-      List<Summary> starred = new ArrayList<>();
-      for (Summary summary : filteredSummaries) {
-        String summaryId = summary.getId();
-        Boolean isFavorite =
-            edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(summaryId);
-        if (Boolean.TRUE.equals(isFavorite)) {
-          starred.add(summary);
-        }
+      if (passesTodayFilter && passesStarredFilter) {
+        filteredSummaries.add(summary);
       }
-      filteredSummaries = starred;
     }
 
     // Apply VIRTUAL filter
@@ -285,8 +270,33 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Sort summaries (Summary implements Comparable)
     Collections.sort(filteredSummaries);
 
-    // Update RecyclerView adapter
+    // Update adapter
     listAdapter.setSummaries(filteredSummaries);
+  }
+
+  /** Helper method to check if a summary is happening today. */
+  private boolean isToday(Summary summary) {
+    Instant now = Helpers.getTimeProvider().now();
+    ZonedDateTime nowZoned = now.atZone(ZoneId.of("America/Chicago"));
+    ZonedDateTime startOfToday =
+        nowZoned.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+    ZonedDateTime endOfToday = startOfToday.plusDays(1).minusNanos(1);
+
+    try {
+      ZonedDateTime eventStart = ZonedDateTime.parse(summary.getStart());
+      Instant eventInstant = eventStart.toInstant();
+      return !eventInstant.isBefore(startOfToday.toInstant())
+          && !eventInstant.isAfter(endOfToday.toInstant());
+    } catch (Exception e) {
+      return false;
+    }
+  }
+
+  /** Helper method to check if a summary is starred (favorite). */
+  private boolean isStarred(Summary summary) {
+    Boolean isFavorite =
+        edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(summary.getId());
+    return Boolean.TRUE.equals(isFavorite);
   }
 
   /**
