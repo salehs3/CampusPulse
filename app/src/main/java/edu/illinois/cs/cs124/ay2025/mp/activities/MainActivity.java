@@ -42,6 +42,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   // Stores the list of event summaries we get from the server (starts null until loaded)
   private List<Summary> summaries = null;
 
+  // Stores the currently displayed summaries after filtering
+  private List<Summary> displayedSummaries = new ArrayList<>();
+
   // The adapter connects our data (summaries) to the RecyclerView (the scrollable list)
   private SummaryListAdapter listAdapter;
 
@@ -74,11 +77,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Set the title that appears at the top of the screen
     setTitle("Discover Events");
 
-    // Create the adapter (starts with empty list, will update later when data loads)
+    // Create the adapter (uses displayedSummaries list)
     // Pass a click callback that launches EventActivity when a summary is clicked
     listAdapter =
         new SummaryListAdapter(
-            new ArrayList<>(),
+            displayedSummaries,
             this,
             (clickedSummary) -> {
               // Create an intent to launch EventActivity
@@ -111,24 +114,20 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     searchView.setOnQueryTextListener(this);
 
     // Set up the calendar button (today filter) click handler
-    ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(isTodayChecked);
+    ToggleButton todayButton = findViewById(R.id.todayButton);
+    todayButton.setChecked(isTodayChecked);
     if (isTodayChecked) {
-      calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+      todayButton.setAlpha(BUTTON_ALPHA_ACTIVE);
     } else {
-      calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+      todayButton.setAlpha(BUTTON_ALPHA_INACTIVE);
     }
-    calendarButton.setOnClickListener(
-        v -> {
-          ToggleButton button = (ToggleButton) v;
-          boolean isChecked = button.isChecked();
+    todayButton.setOnCheckedChangeListener(
+        (button, isChecked) -> {
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
-          isTodayChecked = isChecked;
-          saveFilterState();
           updateDisplayedSummaries();
         });
 
@@ -182,6 +181,10 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
           // Update the displayed list based on the new filter
           updateDisplayedSummaries();
         });
+
+    // Add listener to FavoritesRepository to refresh list when favorites change
+    edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.addListener(
+        () -> runOnUiThread(this::updateDisplayedSummaries));
 
     // Load initial data from server
     loadSummaries();
@@ -238,42 +241,52 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    * on the main UI thread.
    */
   private void updateDisplayedSummaries() {
-    // Don't try to update if summaries is null
     if (summaries == null) {
       return;
     }
 
-    // Read current button states directly
+    // Read button state directly
     ToggleButton starredButton = findViewById(R.id.starredButton);
-    isStarredChecked = starredButton.isChecked();
+    boolean showOnlyStarred = starredButton.isChecked();
 
-    List<Summary> allSummaries = summaries;
-    List<Summary> filteredSummaries = new ArrayList<>();
+    ToggleButton todayButton = findViewById(R.id.todayButton);
+    boolean showOnlyToday = todayButton.isChecked();
 
-    for (Summary summary : allSummaries) {
-      boolean passesTodayFilter = !isTodayChecked || isToday(summary);
-      boolean passesStarredFilter = !isStarredChecked || isStarred(summary);
+    displayedSummaries.clear();
 
-      if (passesTodayFilter && passesStarredFilter) {
-        filteredSummaries.add(summary);
+    for (Summary summary : summaries) {
+      // Today filter
+      if (showOnlyToday && !isToday(summary)) {
+        continue;
       }
+
+      // Starred filter
+      if (showOnlyStarred && !isStarred(summary)) {
+        continue;
+      }
+
+      displayedSummaries.add(summary);
     }
 
     // Apply VIRTUAL filter
     if (isVirtualChecked) {
-      filteredSummaries = Summary.filterVirtual(filteredSummaries, true);
+      List<Summary> virtualFiltered = Summary.filterVirtual(displayedSummaries, true);
+      displayedSummaries.clear();
+      displayedSummaries.addAll(virtualFiltered);
     }
 
     // Apply SEARCH filter
     if (currentSearchQuery != null && !currentSearchQuery.isEmpty()) {
-      filteredSummaries = Summary.search(filteredSummaries, currentSearchQuery);
+      List<Summary> searchFiltered = Summary.search(displayedSummaries, currentSearchQuery);
+      displayedSummaries.clear();
+      displayedSummaries.addAll(searchFiltered);
     }
 
     // Sort summaries (Summary implements Comparable)
-    Collections.sort(filteredSummaries);
+    Collections.sort(displayedSummaries);
 
-    // Update adapter
-    listAdapter.setSummaries(filteredSummaries);
+    // Notify adapter of data changes
+    listAdapter.notifyDataSetChanged();
   }
 
   /** Helper method to check if a summary is happening today. */
@@ -298,7 +311,10 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private boolean isStarred(Summary summary) {
     Boolean isFavorite =
         edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(summary.getId());
-    return Boolean.TRUE.equals(isFavorite);
+    if (isFavorite == null) {
+      return false;
+    }
+    return isFavorite;
   }
 
   /**
