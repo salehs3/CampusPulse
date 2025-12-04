@@ -53,37 +53,34 @@ public final class EventActivity extends Activity {
     }
 
     // Set up the favorite button checked change handler
+    // Updates cache first, then sends server request
     ToggleButton favoriteButton = findViewById(R.id.favoriteButton);
     favoriteButton.setOnCheckedChangeListener(
-        (button, isChecked) -> {
-          // Save the favorite status to the server
+        (buttonView, isChecked) -> {
+          // Update cache immediately for instant UI and cross-activity sync
+          edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+              eventId, isChecked);
+
+          // Fire-and-forget server update
           EventableApplication application = (EventableApplication) getApplication();
-
-          // Update the local cache immediately for better responsiveness
-          application.updateFavoriteCache(eventId, isChecked);
-
           application
               .getClient()
               .setFavorite(
                   eventId,
                   isChecked,
-                  (result) -> {
-                    // This callback runs when the server responds (on a background thread)
+                  (setResult) -> {
                     try {
-                      // Extract the favorite status that was set
-                      boolean favoriteStatus = result.getValue();
-
-                      // Update cache again to ensure it matches server response
-                      application.updateFavoriteCache(eventId, favoriteStatus);
-
-                      // Log for debugging
-                      Log.d(TAG, "Favorite status set to: " + favoriteStatus);
+                      boolean updatedFavoriteStatus = setResult.getValue();
+                      Log.d(TAG, "Favorite status updated to: " + updatedFavoriteStatus);
                     } catch (Exception e) {
-                      // If something goes wrong, log the error and revert the button state
-                      Log.e(TAG, "Error setting favorite status", e);
-                      // Revert the cache update
-                      application.updateFavoriteCache(eventId, !isChecked);
-                      runOnUiThread(() -> button.setChecked(!isChecked));
+                      Log.e(TAG, "Error updating favorite status", e);
+                      // Revert cache and button state if server update fails
+                      runOnUiThread(
+                          () -> {
+                            edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+                                eventId, !isChecked);
+                            favoriteButton.setChecked(!isChecked);
+                          });
                     }
                   });
         });
@@ -156,7 +153,8 @@ public final class EventActivity extends Activity {
                 boolean isFavorite = result.getValue();
 
                 // Update the cache with the favorite status from the server
-                application.updateFavoriteCache(eventId, isFavorite);
+                edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+                    eventId, isFavorite);
 
                 // Switch back to the main UI thread to update the favorite button
                 runOnUiThread(() -> updateFavoriteButton(isFavorite));
@@ -175,35 +173,31 @@ public final class EventActivity extends Activity {
     favoriteButton.setChecked(isFavorite);
     // Re-attach the listener
     favoriteButton.setOnCheckedChangeListener(
-        (button, isChecked) -> {
-          // Save the favorite status to the server
+        (buttonView, isChecked) -> {
+          // Update cache immediately for instant UI and cross-activity sync
+          edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+              eventId, isChecked);
+
+          // Fire-and-forget server update
           EventableApplication application = (EventableApplication) getApplication();
-
-          // Update the local cache immediately for better responsiveness
-          application.updateFavoriteCache(eventId, isChecked);
-
           application
               .getClient()
               .setFavorite(
                   eventId,
                   isChecked,
-                  (result) -> {
-                    // This callback runs when the server responds (on a background thread)
+                  (setResult) -> {
                     try {
-                      // Extract the favorite status that was set
-                      boolean favoriteStatus = result.getValue();
-
-                      // Update cache again to ensure it matches server response
-                      application.updateFavoriteCache(eventId, favoriteStatus);
-
-                      // Log for debugging
-                      Log.d(TAG, "Favorite status set to: " + favoriteStatus);
+                      boolean updatedFavoriteStatus = setResult.getValue();
+                      Log.d(TAG, "Favorite status updated to: " + updatedFavoriteStatus);
                     } catch (Exception e) {
-                      // If something goes wrong, log the error and revert the button state
-                      Log.e(TAG, "Error setting favorite status", e);
-                      // Revert the cache update
-                      application.updateFavoriteCache(eventId, !isChecked);
-                      runOnUiThread(() -> button.setChecked(!isChecked));
+                      Log.e(TAG, "Error updating favorite status", e);
+                      // Revert cache and button state if server update fails
+                      runOnUiThread(
+                          () -> {
+                            edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+                                eventId, !isChecked);
+                            favoriteButton.setChecked(!isChecked);
+                          });
                     }
                   });
         });

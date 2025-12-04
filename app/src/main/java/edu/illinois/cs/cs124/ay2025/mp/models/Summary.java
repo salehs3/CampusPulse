@@ -285,7 +285,10 @@ public class Summary implements Comparable<Summary> {
       }
     }
 
-    Collections.sort(matchingSummaries);
+    // Sort by title alphabetically (case-insensitive) when there's a search query
+    Collections.sort(matchingSummaries, (summaryA, summaryB) -> {
+      return summaryA.getTitle().compareToIgnoreCase(summaryB.getTitle());
+    });
 
     return matchingSummaries;
   }

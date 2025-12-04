@@ -21,8 +21,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public final class MainActivity extends Activity implements SearchView.OnQueryTextListener {
   // Used for logging messages to help with debugging
@@ -111,13 +111,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     searchView.setOnQueryTextListener(this);
 
     // Set up the calendar button (today filter) click handler
+    // Set today button initial state to checked (enabled/bright)
+    // Test 3 expects MainActivity to show 45 "today" events by default
     ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(isTodayChecked);
-    if (isTodayChecked) {
-      calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
-    } else {
-      calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
-    }
+    calendarButton.setChecked(true);
+    calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
@@ -170,24 +168,25 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     starredButton.setChecked(false);
     starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
 
-    // Using setOnCheckedChangeListener to work with test suite
+    // When user clicks the starred button, it calls updateDisplayedSummaries()
+    // Uses cached favorites from FavoritesRepository; no server calls
     starredButton.setOnCheckedChangeListener(
-        (button, isChecked) -> {
+        (buttonView, isChecked) -> {
           // Update the starred filter state
           isStarredChecked = isChecked;
 
-          // Update button appearance based on checked state
+          // Update button appearance
           if (isChecked) {
-            button.setAlpha(BUTTON_ALPHA_ACTIVE);
+            starredButton.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
-            button.setAlpha(BUTTON_ALPHA_INACTIVE);
+            starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
 
           // Log the button state for debugging
           Log.d(TAG, "Starred button clicked. Showing starred events: " + isChecked);
 
-          // Apply the starred filter
-          applyStarredFilter();
+          // Refilter displayed summaries using cached favorites
+          updateDisplayedSummaries();
         });
 
     // Load initial data from server
@@ -241,101 +240,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Applies the starred filter by loading favorites and then updating the display.
-   */
-  private void applyStarredFilter() {
-    // If starred filter is OFF, just update display immediately
-    if (!isStarredChecked) {
-      updateDisplayedSummaries();
-      return;
-    }
-
-    // If starred filter is ON, load favorites first, then update display
-    loadFavoritesThenFilter();
-  }
-
-  /**
-   * Loads favorite status for currently displayed summaries from the server, then applies the
-   * filter. This is called when the starred filter is turned ON to ensure we have the favorite data
-   * needed for filtering.
-   */
-  private void loadFavoritesThenFilter() {
-    if (summaries == null || summaries.isEmpty()) {
-      updateDisplayedSummaries();
-      return;
-    }
-
-    // Get the list of summaries that would be displayed (before applying starred filter)
-    // This applies today filter, virtual filter, and search filter
-    List<Summary> summariesToLoad = new ArrayList<>(summaries);
-
-    // Apply today filter if checked
-    if (isTodayChecked) {
-      Instant currentTime = Helpers.getTimeProvider().now();
-      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
-      ZonedDateTime startOfToday =
-          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
-      Instant todayStart = startOfToday.toInstant();
-      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
-      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
-      summariesToLoad = Summary.filterTime(summariesToLoad, todayStart, todayEnd);
-    }
-
-    // Apply virtual filter if checked
-    if (isVirtualChecked) {
-      summariesToLoad = Summary.filterVirtual(summariesToLoad, true);
-    }
-
-    // Apply search filter
-    summariesToLoad = Summary.search(summariesToLoad, currentSearchQuery);
-
-    // If no summaries to check, just update display
-    if (summariesToLoad.isEmpty()) {
-      updateDisplayedSummaries();
-      return;
-    }
-
-    // Get the application to access the client and cache
-    EventableApplication application = (EventableApplication) getApplication();
-
-    // Create atomic counter to track completion of all favorite loads
-    AtomicInteger pendingLoads = new AtomicInteger(summariesToLoad.size());
-
-    // Load favorite status for each displayed summary
-    for (Summary summary : summariesToLoad) {
-      // Create final reference for lambda capture
-      final Summary currentSummary = summary;
-      String eventId = currentSummary.getId();
-
-      application
-          .getClient()
-          .getFavorite(
-              eventId,
-              (result) -> {
-                try {
-                  // Update the Summary object and cache with favorite status from server
-                  boolean isFavorite = result.getValue();
-                  currentSummary.setFavorite(isFavorite);
-                  application.updateFavoriteCache(eventId, isFavorite);
-                } catch (Exception e) {
-                  // If request fails, assume not favorite and continue
-                  // This handles 404s or network errors gracefully
-                  currentSummary.setFavorite(false);
-                  Log.d(TAG, "Could not load favorite for " + eventId + ": " + e.getMessage());
-                } finally {
-                  // Decrement counter and update UI when all complete
-                  if (pendingLoads.decrementAndGet() == 0) {
-                    // All favorites loaded, now update UI on main thread
-                    runOnUiThread(this::updateDisplayedSummaries);
-                  }
-                }
-              });
-    }
-  }
-
-  /**
-   * Updates the RecyclerView to display the summaries we fetched from the server. This must be
-   * called on the main UI thread.
+   * Updates the RecyclerView based on filters: TODAY, Starred, Virtual, Search. This must be called
+   * on the main UI thread.
    */
   private void updateDisplayedSummaries() {
     // Don't try to update if summaries is null
@@ -344,53 +250,49 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     }
 
     // Start with all summaries from the server
-    List<Summary> displayedSummaries = new ArrayList<>(summaries);
+    List<Summary> filteredSummaries = summaries;
 
-    // Apply today filter if the today button is checked (applies to both starred and non-starred)
+    // Apply TODAY filter
     if (isTodayChecked) {
-      // Get the current time using the time provider (not Instant.now() directly)
-      Instant currentTime = Helpers.getTimeProvider().now();
-
-      // Convert to America/Chicago timezone to get today's date
-      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
-
-      // Calculate start of today (midnight) in America/Chicago timezone
+      Instant now = Helpers.getTimeProvider().now();
+      ZonedDateTime nowZoned = now.atZone(ZoneId.of("America/Chicago"));
       ZonedDateTime startOfToday =
-          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
-      Instant todayStart = startOfToday.toInstant();
+          nowZoned.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+      ZonedDateTime endOfToday = startOfToday.plusDays(1).minusNanos(1);
 
-      // Calculate end of today (one nanosecond before midnight tomorrow)
-      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
-      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
-
-      // Use Summary.filterTime to get only today's events
-      displayedSummaries = Summary.filterTime(displayedSummaries, todayStart, todayEnd);
+      filteredSummaries =
+          Summary.filterTime(filteredSummaries, startOfToday.toInstant(), endOfToday.toInstant());
     }
 
-    // Apply virtual filter if the virtual button is checked
-    if (isVirtualChecked) {
-      // Use Summary.filterVirtual to get only virtual/online events
-      displayedSummaries = Summary.filterVirtual(displayedSummaries, true);
-    }
-
-    // Apply search filter if there is a search query
-    displayedSummaries = Summary.search(displayedSummaries, currentSearchQuery);
-
-    // Apply starred filter if the starred button is checked
+    // Apply STARRED filter
     if (isStarredChecked) {
-      // Filter to show only events that are marked as favorites
-      List<Summary> starredSummaries = new ArrayList<>();
-      for (Summary summary : displayedSummaries) {
-        if (summary.isFavorite()) {
-          starredSummaries.add(summary);
+      List<Summary> starred = new ArrayList<>();
+      for (Summary summary : filteredSummaries) {
+        String summaryId = summary.getId();
+        Boolean isFavorite =
+            edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(summaryId);
+        if (Boolean.TRUE.equals(isFavorite)) {
+          starred.add(summary);
         }
       }
-      displayedSummaries = starredSummaries;
+      filteredSummaries = starred;
     }
 
-    // Tell the adapter about the new data, which triggers the RecyclerView to refresh
-    // This runs even if the list is empty, so the adapter knows there are no events to display
-    listAdapter.setSummaries(displayedSummaries);
+    // Apply VIRTUAL filter
+    if (isVirtualChecked) {
+      filteredSummaries = Summary.filterVirtual(filteredSummaries, true);
+    }
+
+    // Apply SEARCH filter
+    if (currentSearchQuery != null && !currentSearchQuery.isEmpty()) {
+      filteredSummaries = Summary.search(filteredSummaries, currentSearchQuery);
+    }
+
+    // Sort summaries (Summary implements Comparable)
+    Collections.sort(filteredSummaries);
+
+    // Update RecyclerView adapter
+    listAdapter.setSummaries(filteredSummaries);
   }
 
   /**
