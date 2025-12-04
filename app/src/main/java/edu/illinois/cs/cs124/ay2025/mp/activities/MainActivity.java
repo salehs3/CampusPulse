@@ -243,14 +243,19 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 summaries = result.getValue();
 
                 // Sync favorite status from FavoritesRepository to Summary objects
+                int favCount = 0;
                 for (Summary summary : summaries) {
                   Boolean isFavorite =
                       edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
                           summary.getId());
                   if (isFavorite != null) {
                     summary.setFavorite(isFavorite);
+                    if (isFavorite) {
+                      favCount++;
+                    }
                   }
                 }
+                Log.d(TAG, "loadSummaries - Synced " + favCount + " favorites to " + summaries.size() + " summaries");
 
                 // Update UI to show the summaries list
                 runOnUiThread(this::updateDisplayedSummaries);
@@ -277,6 +282,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     ToggleButton todayButton = findViewById(R.id.todayButton);
     boolean todayChecked = todayButton.isChecked();
 
+    Log.d(TAG, "updateDisplayedSummaries - starredChecked: " + starredChecked + ", todayChecked: " + todayChecked);
+
     displayedSummaries.clear();
 
     for (Summary summary : summaries) {
@@ -287,11 +294,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
       // Starred filter - use summary.isFavorite()
       if (starredChecked && !summary.isFavorite()) {
+        Log.d(TAG, "Filtering out non-favorite: " + summary.getTitle() + " isFavorite=" + summary.isFavorite());
         continue;
       }
 
       displayedSummaries.add(summary);
     }
+
+    Log.d(TAG, "updateDisplayedSummaries - displayedSummaries.size(): " + displayedSummaries.size());
 
     // Apply VIRTUAL filter
     if (isVirtualChecked) {
