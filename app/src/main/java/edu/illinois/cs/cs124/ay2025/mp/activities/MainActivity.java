@@ -113,7 +113,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Set up the calendar button (today filter) click handler
     ToggleButton calendarButton = findViewById(R.id.todayButton);
     calendarButton.setChecked(isTodayChecked);
-    calendarButton.setAlpha(isTodayChecked ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE);
+    if (isTodayChecked) {
+      calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+    } else {
+      calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+    }
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
