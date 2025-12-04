@@ -322,22 +322,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Apply VIRTUAL filter
     if (isVirtualChecked) {
-      List<Summary> virtualFiltered = Summary.filterVirtual(displayedSummaries, true);
-      displayedSummaries.clear();
-      displayedSummaries.addAll(virtualFiltered);
+      displayedSummaries.retainAll(Summary.filterVirtual(displayedSummaries, true));
     }
 
     // Apply SEARCH filter
     if (currentSearchQuery != null && !currentSearchQuery.isEmpty()) {
-      List<Summary> searchFiltered = Summary.search(displayedSummaries, currentSearchQuery);
-      displayedSummaries.clear();
-      displayedSummaries.addAll(searchFiltered);
+      displayedSummaries.retainAll(Summary.search(displayedSummaries, currentSearchQuery));
     }
 
-    // Sort summaries (Summary implements Comparable)
+    // Sort and notify adapter
     Collections.sort(displayedSummaries);
-
-    // Notify adapter of data changes
     listAdapter.notifyDataSetChanged();
   }
 
