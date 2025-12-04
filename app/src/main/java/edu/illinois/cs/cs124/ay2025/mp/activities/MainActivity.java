@@ -179,10 +179,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
 
-          // Update state
-          isStarredChecked = isChecked;
-          saveFilterState(); // Save to SharedPreferences
-          updateDisplayedSummaries(); // Refresh adapter with filtered items
+          // Update the displayed list based on the new filter
+          updateDisplayedSummaries();
         });
 
     // Load initial data from server
@@ -244,6 +242,10 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     if (summaries == null) {
       return;
     }
+
+    // Read current button states directly
+    ToggleButton starredButton = findViewById(R.id.starredButton);
+    isStarredChecked = starredButton.isChecked();
 
     List<Summary> allSummaries = summaries;
     List<Summary> filteredSummaries = new ArrayList<>();
