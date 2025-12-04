@@ -188,6 +188,7 @@ public final class Server extends Dispatcher {
         return makeOKJSONResponse(CHECK_SERVER_RESPONSE);
       } else if (path.equals("/reset") && method.equals("GET")) {
         favorites.clear();
+        edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.clear();
         return makeOKJSONResponse("200: OK");
       } else if (path.equals("/summary") && method.equals("GET")) {
         return getSummaries();
