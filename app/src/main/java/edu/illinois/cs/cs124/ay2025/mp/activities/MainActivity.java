@@ -272,16 +272,11 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Applies the starred filter by loading favorites first if needed, then updating the display.
+   * Applies the starred filter by updating the display with current favorite data.
    */
   private void applyStarredFilter() {
-    if (isStarredChecked) {
-      // Load favorites for current summaries first, then update display
-      loadFavoritesThenFilter();
-    } else {
-      // Show all if filter is off
-      updateDisplayedSummaries();
-    }
+    // Favorites are already loaded by loadSummaries(), just update the display
+    updateDisplayedSummaries();
   }
 
   /**
