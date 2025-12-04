@@ -184,7 +184,22 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Add listener to FavoritesRepository to refresh list when favorites change
     edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.addListener(
-        () -> runOnUiThread(this::updateDisplayedSummaries));
+        () ->
+            runOnUiThread(
+                () -> {
+                  // Sync favorite status from FavoritesRepository to Summary objects
+                  if (summaries != null) {
+                    for (Summary summary : summaries) {
+                      Boolean isFavorite =
+                          edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
+                              summary.getId());
+                      if (isFavorite != null) {
+                        summary.setFavorite(isFavorite);
+                      }
+                    }
+                  }
+                  updateDisplayedSummaries();
+                }));
 
     // Load initial data from server
     loadSummaries();
@@ -227,6 +242,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Store the full list of summaries
                 summaries = result.getValue();
 
+                // Sync favorite status from FavoritesRepository to Summary objects
+                for (Summary summary : summaries) {
+                  Boolean isFavorite =
+                      edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
+                          summary.getId());
+                  if (isFavorite != null) {
+                    summary.setFavorite(isFavorite);
+                  }
+                }
+
                 // Update UI to show the summaries list
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
@@ -245,23 +270,23 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       return;
     }
 
-    // Read current button state here
+    // Always read live button state
     ToggleButton starredButton = findViewById(R.id.starredButton);
-    isStarredChecked = starredButton.isChecked();
+    boolean starredChecked = starredButton.isChecked();
 
     ToggleButton todayButton = findViewById(R.id.todayButton);
-    isTodayChecked = todayButton.isChecked();
+    boolean todayChecked = todayButton.isChecked();
 
     displayedSummaries.clear();
 
     for (Summary summary : summaries) {
       // Today filter
-      if (isTodayChecked && !isToday(summary)) {
+      if (todayChecked && !isToday(summary)) {
         continue;
       }
 
-      // Starred filter
-      if (isStarredChecked && !isStarred(summary)) {
+      // Starred filter - use summary.isFavorite()
+      if (starredChecked && !summary.isFavorite()) {
         continue;
       }
 
