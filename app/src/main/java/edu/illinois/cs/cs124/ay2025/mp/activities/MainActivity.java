@@ -119,22 +119,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
     }
     calendarButton.setOnClickListener(
-        (v) -> {
-          // Handle calendar button click
+        v -> {
           ToggleButton button = (ToggleButton) v;
           boolean isChecked = button.isChecked();
-
-          // Update button appearance based on checked state
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
-
-          // Log the button state for debugging
-          Log.d(TAG, "Calendar button clicked. Showing today's events: " + isChecked);
-
-          // Update the today filter state and refresh the displayed events
           isTodayChecked = isChecked;
           saveFilterState();
           updateDisplayedSummaries();
