@@ -290,12 +290,6 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
       // Starred filter - use summary.isFavorite()
       if (starredChecked && !summary.isFavorite()) {
-        Log.d(
-            TAG,
-            "Filtering out non-favorite: "
-                + summary.getTitle()
-                + " isFavorite="
-                + summary.isFavorite());
         continue;
       }
 

@@ -235,6 +235,10 @@ public final class Client {
                 return;
               }
 
+              // Update FavoritesRepository to keep in sync
+              edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.setFavorite(
+                  eventId, isFavorite);
+
               // Success! Call the callback with the favorite status that was set
               callback.accept(new ResultMightThrow<>(isFavorite));
             }
