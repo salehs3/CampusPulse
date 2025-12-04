@@ -46,7 +46,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private SummaryListAdapter listAdapter;
 
   // Tracks whether the today filter button is checked (true = show only today's events)
-  private boolean isTodayChecked = true;
+  private boolean isTodayChecked = false;
 
   // Tracks whether the virtual filter button is checked (true = show only virtual/online events)
   private boolean isVirtualChecked = false;
@@ -111,11 +111,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     searchView.setOnQueryTextListener(this);
 
     // Set up the calendar button (today filter) click handler
-    // Set today button initial state to checked (enabled/bright)
-    // Test 3 expects MainActivity to show 45 "today" events by default
     ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(true);
-    calendarButton.setAlpha(BUTTON_ALPHA_ACTIVE);
+    calendarButton.setChecked(false);
+    calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
@@ -326,7 +324,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
+    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, false);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
