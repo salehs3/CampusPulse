@@ -136,24 +136,14 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Set up the virtual button (virtual/online events filter) click handler
     ToggleButton virtualButton = findViewById(R.id.virtualButton);
-    virtualButton.setOnClickListener(
-        (v) -> {
-          // Handle virtual button click
-          ToggleButton button = (ToggleButton) v;
-          boolean isChecked = button.isChecked();
-
-          // Update button appearance based on checked state
+    virtualButton.setOnCheckedChangeListener(
+        (button, isChecked) -> {
+          isVirtualChecked = isChecked;
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
-
-          // Log the button state for debugging
-          Log.d(TAG, "Virtual button clicked. Showing virtual events: " + isChecked);
-
-          // Update the virtual filter state and refresh the displayed events
-          isVirtualChecked = isChecked;
           saveFilterState();
           updateDisplayedSummaries();
         });
@@ -192,10 +182,10 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                   // Sync favorite status from FavoritesRepository to Summary objects
                   if (summaries != null) {
                     for (Summary summary : summaries) {
-                      Boolean isFavorite =
-                          edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
-                              summary.getId());
-                      summary.setFavorite(isFavorite != null && isFavorite);
+                      summary.setFavorite(
+                          Boolean.TRUE.equals(
+                              edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository
+                                  .isFavorite(summary.getId())));
                     }
                   }
                   updateDisplayedSummaries();
@@ -242,13 +232,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Store the full list of summaries
                 summaries = result.getValue();
 
-                // Ensure all summaries have a non-null favorite value
+                // Sync favorite status immediately
                 int favCount = 0;
                 for (Summary summary : summaries) {
-                  Boolean isFavorite =
-                      edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
-                          summary.getId());
-                  summary.setFavorite(isFavorite != null && isFavorite);
+                  summary.setFavorite(
+                      Boolean.TRUE.equals(
+                          edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
+                              summary.getId())));
                   if (summary.isFavorite()) {
                     favCount++;
                   }
@@ -261,7 +251,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                         + summaries.size()
                         + " summaries");
 
-                // Update UI to show the summaries list
+                // Now update displayed summaries
                 runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
@@ -347,16 +337,6 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     } catch (Exception e) {
       return false;
     }
-  }
-
-  /** Helper method to check if a summary is starred (favorite). */
-  private boolean isStarred(Summary summary) {
-    Boolean isFavorite =
-        edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(summary.getId());
-    if (isFavorite == null) {
-      return false;
-    }
-    return isFavorite;
   }
 
   /**
