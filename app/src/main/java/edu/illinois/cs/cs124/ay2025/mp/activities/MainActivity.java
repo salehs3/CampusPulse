@@ -46,7 +46,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   private SummaryListAdapter listAdapter;
 
   // Tracks whether the today filter button is checked (true = show only today's events)
-  private boolean isTodayChecked = false;
+  private boolean isTodayChecked = true;
 
   // Tracks whether the virtual filter button is checked (true = show only virtual/online events)
   private boolean isVirtualChecked = false;
@@ -136,6 +136,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
           // Update the today filter state and refresh the displayed events
           isTodayChecked = isChecked;
+          saveFilterState();
           updateDisplayedSummaries();
         });
 
@@ -159,6 +160,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
           // Update the virtual filter state and refresh the displayed events
           isVirtualChecked = isChecked;
+          saveFilterState();
           updateDisplayedSummaries();
         });
 
@@ -168,13 +170,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     starredButton.setChecked(false);
     starredButton.setAlpha(BUTTON_ALPHA_INACTIVE);
 
-    // Using setOnClickListener because tests trigger clicks, not state changes
-    starredButton.setOnClickListener(
-        (v) -> {
-          // Handle starred button click
-          ToggleButton button = (ToggleButton) v;
-          boolean isChecked = button.isChecked();
-
+    // Using setOnCheckedChangeListener to work with test suite
+    starredButton.setOnCheckedChangeListener(
+        (button, isChecked) -> {
           // Update the starred filter state
           isStarredChecked = isChecked;
 
@@ -403,6 +401,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   public boolean onQueryTextSubmit(String query) {
     // Update the search query and refresh the displayed events
     currentSearchQuery = query;
+    saveFilterState();
     updateDisplayedSummaries();
     return true;
   }
@@ -414,6 +413,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   public boolean onQueryTextChange(String newText) {
     // Update the search query and refresh the displayed events in real-time
     currentSearchQuery = newText;
+    saveFilterState();
     updateDisplayedSummaries();
     return true;
   }
@@ -424,7 +424,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, false);
+    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
