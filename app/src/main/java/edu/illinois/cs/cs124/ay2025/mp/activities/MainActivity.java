@@ -245,23 +245,23 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       return;
     }
 
-    // Read button state directly
+    // Read current button state here
     ToggleButton starredButton = findViewById(R.id.starredButton);
-    boolean showOnlyStarred = starredButton.isChecked();
+    isStarredChecked = starredButton.isChecked();
 
     ToggleButton todayButton = findViewById(R.id.todayButton);
-    boolean showOnlyToday = todayButton.isChecked();
+    isTodayChecked = todayButton.isChecked();
 
     displayedSummaries.clear();
 
     for (Summary summary : summaries) {
       // Today filter
-      if (showOnlyToday && !isToday(summary)) {
+      if (isTodayChecked && !isToday(summary)) {
         continue;
       }
 
       // Starred filter
-      if (showOnlyStarred && !isStarred(summary)) {
+      if (isStarredChecked && !isStarred(summary)) {
         continue;
       }
 
