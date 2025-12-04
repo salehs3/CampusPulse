@@ -195,9 +195,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                       Boolean isFavorite =
                           edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
                               summary.getId());
-                      if (isFavorite != null) {
-                        summary.setFavorite(isFavorite);
-                      }
+                      summary.setFavorite(isFavorite != null && isFavorite);
                     }
                   }
                   updateDisplayedSummaries();
@@ -244,17 +242,15 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Store the full list of summaries
                 summaries = result.getValue();
 
-                // Sync favorite status from FavoritesRepository to Summary objects
+                // Ensure all summaries have a non-null favorite value
                 int favCount = 0;
                 for (Summary summary : summaries) {
                   Boolean isFavorite =
                       edu.illinois.cs.cs124.ay2025.mp.helpers.FavoritesRepository.isFavorite(
                           summary.getId());
-                  if (isFavorite != null) {
-                    summary.setFavorite(isFavorite);
-                    if (isFavorite) {
-                      favCount++;
-                    }
+                  summary.setFavorite(isFavorite != null && isFavorite);
+                  if (summary.isFavorite()) {
+                    favCount++;
                   }
                 }
                 Log.d(
