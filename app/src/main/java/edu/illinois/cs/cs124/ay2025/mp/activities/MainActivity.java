@@ -65,6 +65,9 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   protected void onCreate(@Nullable Bundle bundle) {
     super.onCreate(bundle); // Always call parent class first
 
+    // Load saved filter state before setting up the UI
+    loadFilterState();
+
     // Load the visual layout from activity_main.xml
     setContentView(R.layout.activity_main);
 
@@ -109,8 +112,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
     // Set up the calendar button (today filter) click handler
     ToggleButton calendarButton = findViewById(R.id.todayButton);
-    calendarButton.setChecked(false);
-    calendarButton.setAlpha(BUTTON_ALPHA_INACTIVE);
+    calendarButton.setChecked(isTodayChecked);
+    calendarButton.setAlpha(isTodayChecked ? BUTTON_ALPHA_ACTIVE : BUTTON_ALPHA_INACTIVE);
     calendarButton.setOnClickListener(
         (v) -> {
           // Handle calendar button click
@@ -226,44 +229,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                 // Store the full list of summaries
                 summaries = result.getValue();
 
-                // If summaries list is empty, just update UI immediately
-                if (summaries.isEmpty()) {
-                  runOnUiThread(this::updateDisplayedSummaries);
-                  return;
-                }
-
-                // Load favorite status for ALL summaries to populate the cache
-                // This ensures the starred filter works even if favorites were set via API
-                EventableApplication app = (EventableApplication) getApplication();
-
-                // Create atomic counter to track completion of all favorite loads
-                AtomicInteger pendingLoads = new AtomicInteger(summaries.size());
-
-                // Load favorite status for each summary
-                for (Summary summary : summaries) {
-                  // Create final reference for lambda capture
-                  final Summary currentSummary = summary;
-                  String eventId = currentSummary.getId();
-
-                  app.getClient()
-                      .getFavorite(
-                          eventId,
-                          (favResult) -> {
-                            try {
-                              boolean isFav = favResult.getValue();
-                              currentSummary.setFavorite(isFav);
-                              app.updateFavoriteCache(eventId, isFav);
-                            } catch (Exception ex) {
-                              Log.d(TAG, "Could not load favorite for " + eventId);
-                            } finally {
-                              // Decrement counter and update UI when all complete
-                              if (pendingLoads.decrementAndGet() == 0) {
-                                // All favorites loaded, now update UI on main thread
-                                runOnUiThread(this::updateDisplayedSummaries);
-                              }
-                            }
-                          });
-                }
+                // Update UI to show the summaries list
+                runOnUiThread(this::updateDisplayedSummaries);
               } catch (Exception e) {
                 // If something goes wrong, log the error for debugging
                 Log.e(TAG, "Error updating summary list", e);
@@ -272,17 +239,23 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   }
 
   /**
-   * Applies the starred filter by updating the display with current favorite data.
+   * Applies the starred filter by loading favorites and then updating the display.
    */
   private void applyStarredFilter() {
-    // Favorites are already loaded by loadSummaries(), just update the display
-    updateDisplayedSummaries();
+    // If starred filter is OFF, just update display immediately
+    if (!isStarredChecked) {
+      updateDisplayedSummaries();
+      return;
+    }
+
+    // If starred filter is ON, load favorites first, then update display
+    loadFavoritesThenFilter();
   }
 
   /**
-   * Loads favorite status for all current summaries from the server, then applies the filter. This
-   * is called when the starred filter is turned ON to ensure we have the favorite data needed for
-   * filtering.
+   * Loads favorite status for currently displayed summaries from the server, then applies the
+   * filter. This is called when the starred filter is turned ON to ensure we have the favorite data
+   * needed for filtering.
    */
   private void loadFavoritesThenFilter() {
     if (summaries == null || summaries.isEmpty()) {
@@ -290,14 +263,44 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       return;
     }
 
+    // Get the list of summaries that would be displayed (before applying starred filter)
+    // This applies today filter, virtual filter, and search filter
+    List<Summary> summariesToLoad = new ArrayList<>(summaries);
+
+    // Apply today filter if checked
+    if (isTodayChecked) {
+      Instant currentTime = Helpers.getTimeProvider().now();
+      ZonedDateTime currentChicagoTime = currentTime.atZone(ZoneId.of("America/Chicago"));
+      ZonedDateTime startOfToday =
+          currentChicagoTime.toLocalDate().atStartOfDay(ZoneId.of("America/Chicago"));
+      Instant todayStart = startOfToday.toInstant();
+      ZonedDateTime startOfTomorrow = startOfToday.plusDays(1);
+      Instant todayEnd = startOfTomorrow.toInstant().minusNanos(1);
+      summariesToLoad = Summary.filterTime(summariesToLoad, todayStart, todayEnd);
+    }
+
+    // Apply virtual filter if checked
+    if (isVirtualChecked) {
+      summariesToLoad = Summary.filterVirtual(summariesToLoad, true);
+    }
+
+    // Apply search filter
+    summariesToLoad = Summary.search(summariesToLoad, currentSearchQuery);
+
+    // If no summaries to check, just update display
+    if (summariesToLoad.isEmpty()) {
+      updateDisplayedSummaries();
+      return;
+    }
+
     // Get the application to access the client and cache
     EventableApplication application = (EventableApplication) getApplication();
 
-    // Create array to track completion of all favorite loads
-    AtomicInteger pendingLoads = new AtomicInteger(summaries.size());
+    // Create atomic counter to track completion of all favorite loads
+    AtomicInteger pendingLoads = new AtomicInteger(summariesToLoad.size());
 
-    // Load favorite status for each summary
-    for (Summary summary : summaries) {
+    // Load favorite status for each displayed summary
+    for (Summary summary : summariesToLoad) {
       // Create final reference for lambda capture
       final Summary currentSummary = summary;
       String eventId = currentSummary.getId();
@@ -308,13 +311,15 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
               eventId,
               (result) -> {
                 try {
-                  // Update the cache with the favorite status from the server
+                  // Update the Summary object and cache with favorite status from server
                   boolean isFavorite = result.getValue();
                   currentSummary.setFavorite(isFavorite);
                   application.updateFavoriteCache(eventId, isFavorite);
                 } catch (Exception e) {
-                  // If request fails, just log it
-                  Log.d(TAG, "Could not load favorite for " + eventId);
+                  // If request fails, assume not favorite and continue
+                  // This handles 404s or network errors gracefully
+                  currentSummary.setFavorite(false);
+                  Log.d(TAG, "Could not load favorite for " + eventId + ": " + e.getMessage());
                 } finally {
                   // Decrement counter and update UI when all complete
                   if (pendingLoads.decrementAndGet() == 0) {
@@ -415,7 +420,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
    */
   private void loadFilterState() {
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
-    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
+    isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, false);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
