@@ -37,6 +37,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
   // SharedPreferences keys for persisting filter state
   private static final String PREF_KEY_TODAY_CHECKED = "filter_today_checked";
   private static final String PREF_KEY_VIRTUAL_CHECKED = "filter_virtual_checked";
+  private static final String PREF_KEY_STARRED_CHECKED = "filter_starred_checked";
   private static final String PREF_KEY_SEARCH_QUERY = "filter_search_query";
 
   // Stores the list of event summaries we get from the server (starts null until loaded)
@@ -123,6 +124,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     }
     todayButton.setOnCheckedChangeListener(
         (button, isChecked) -> {
+          isTodayChecked = isChecked;
+          saveFilterState();
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
@@ -171,14 +174,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     // Handle starred button clicks
     starredButton.setOnCheckedChangeListener(
         (button, isChecked) -> {
-          // Update appearance
+          isStarredChecked = isChecked;
+          saveFilterState();
           if (isChecked) {
             button.setAlpha(BUTTON_ALPHA_ACTIVE);
           } else {
             button.setAlpha(BUTTON_ALPHA_INACTIVE);
           }
-
-          // Update the displayed list based on the new filter
           updateDisplayedSummaries();
         });
 
@@ -255,7 +257,13 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
                     }
                   }
                 }
-                Log.d(TAG, "loadSummaries - Synced " + favCount + " favorites to " + summaries.size() + " summaries");
+                Log.d(
+                    TAG,
+                    "loadSummaries - Synced "
+                        + favCount
+                        + " favorites to "
+                        + summaries.size()
+                        + " summaries");
 
                 // Update UI to show the summaries list
                 runOnUiThread(this::updateDisplayedSummaries);
@@ -275,14 +283,16 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
       return;
     }
 
-    // Always read live button state
-    ToggleButton starredButton = findViewById(R.id.starredButton);
-    boolean starredChecked = starredButton.isChecked();
+    // Use stored variables instead of reading from UI
+    boolean todayChecked = isTodayChecked;
+    boolean starredChecked = isStarredChecked;
 
-    ToggleButton todayButton = findViewById(R.id.todayButton);
-    boolean todayChecked = todayButton.isChecked();
-
-    Log.d(TAG, "updateDisplayedSummaries - starredChecked: " + starredChecked + ", todayChecked: " + todayChecked);
+    Log.d(
+        TAG,
+        "updateDisplayedSummaries - starredChecked: "
+            + starredChecked
+            + ", todayChecked: "
+            + todayChecked);
 
     displayedSummaries.clear();
 
@@ -294,14 +304,21 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
 
       // Starred filter - use summary.isFavorite()
       if (starredChecked && !summary.isFavorite()) {
-        Log.d(TAG, "Filtering out non-favorite: " + summary.getTitle() + " isFavorite=" + summary.isFavorite());
+        Log.d(
+            TAG,
+            "Filtering out non-favorite: "
+                + summary.getTitle()
+                + " isFavorite="
+                + summary.isFavorite());
         continue;
       }
 
       displayedSummaries.add(summary);
     }
 
-    Log.d(TAG, "updateDisplayedSummaries - displayedSummaries.size(): " + displayedSummaries.size());
+    Log.d(
+        TAG,
+        "updateDisplayedSummaries - displayedSummaries.size(): " + displayedSummaries.size());
 
     // Apply VIRTUAL filter
     if (isVirtualChecked) {
@@ -385,6 +402,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     SharedPreferences preferences = getPreferences(MODE_PRIVATE);
     isTodayChecked = preferences.getBoolean(PREF_KEY_TODAY_CHECKED, true);
     isVirtualChecked = preferences.getBoolean(PREF_KEY_VIRTUAL_CHECKED, false);
+    isStarredChecked = preferences.getBoolean(PREF_KEY_STARRED_CHECKED, false);
     currentSearchQuery = preferences.getString(PREF_KEY_SEARCH_QUERY, "");
     Log.d(
         TAG,
@@ -392,6 +410,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             + isTodayChecked
             + ", Virtual: "
             + isVirtualChecked
+            + ", Starred: "
+            + isStarredChecked
             + ", Search: '"
             + currentSearchQuery
             + "'");
@@ -406,6 +426,7 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
     SharedPreferences.Editor editor = preferences.edit();
     editor.putBoolean(PREF_KEY_TODAY_CHECKED, isTodayChecked);
     editor.putBoolean(PREF_KEY_VIRTUAL_CHECKED, isVirtualChecked);
+    editor.putBoolean(PREF_KEY_STARRED_CHECKED, isStarredChecked);
     editor.putString(PREF_KEY_SEARCH_QUERY, currentSearchQuery);
     editor.apply();
     Log.d(
@@ -414,6 +435,8 @@ public final class MainActivity extends Activity implements SearchView.OnQueryTe
             + isTodayChecked
             + ", Virtual: "
             + isVirtualChecked
+            + ", Starred: "
+            + isStarredChecked
             + ", Search: '"
             + currentSearchQuery
             + "'");
